@@ -527,6 +527,31 @@
   .brand-field input[type=file]{ font-family:'Inter',sans-serif; font-size:12px; }
   .brand-hint{ font-family:'Space Mono',monospace; font-size:10.5px; color:var(--paper-fade); }
   .backup-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .lock-overlay{
+    position:fixed; inset:0; background:var(--graphite); z-index:200;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .lock-box{
+    width:100%; max-width:300px; display:flex; flex-direction:column; align-items:center; gap:14px;
+  }
+  .lock-icon{ font-size:40px; }
+  .lock-title{
+    font-family:'Space Mono',monospace; font-size:14px; letter-spacing:0.06em; color:#F2F1ED;
+  }
+  .lock-pin-input{
+    width:160px; text-align:center; font-size:26px; letter-spacing:0.5em; padding:10px 0 10px 0.5em;
+    border-radius:8px; border:1px solid #4A4952; background:var(--graphite-light); color:#F2F1ED;
+    font-family:'Space Mono',monospace;
+  }
+  .lock-pin-input:focus{ outline:none; border-color:var(--felt-light); }
+  .lock-error{ font-family:'Space Mono',monospace; font-size:12px; color:#FF9B85; }
+  .lock-text-input{
+    width:100%; padding:10px 12px; border-radius:8px; border:1px solid #4A4952;
+    background:var(--graphite-light); color:#F2F1ED; font-family:'Inter',sans-serif;
+    font-size:13px;
+  }
+  .lock-text-input:focus{ outline:none; border-color:var(--felt-light); }
+  .lock-text-input::placeholder{ color:#8A8992; }
 
   /* ---------- MODAL ---------- */
   .modal-overlay{
@@ -556,11 +581,33 @@
 </style>
 </head>
 <body>
+<div class="lock-overlay" id="lockOverlay" hidden>
+  <div class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <div class="lock-title">Ingresa tu PIN</div>
+    <input type="password" id="lockPinInput" inputmode="numeric" maxlength="4" class="lock-pin-input" autocomplete="off">
+    <div class="lock-error" id="lockError" hidden>PIN incorrecto</div>
+    <button type="button" id="lockUnlockBtn" class="key key-add" style="width:100%;">Desbloquear</button>
+  </div>
+</div>
+<div class="lock-overlay" id="authOverlay" hidden>
+  <div class="lock-box" style="max-width:320px;">
+    <div class="lock-icon">☁️</div>
+    <div class="lock-title">Sincronización en la nube</div>
+    <input type="email" id="authEmail" placeholder="Correo" class="lock-text-input" autocomplete="username">
+    <input type="password" id="authPassword" placeholder="Contraseña (mín. 6 caracteres)" class="lock-text-input" autocomplete="current-password">
+    <div class="lock-error" id="authError" hidden></div>
+    <button type="button" id="authSignInBtn" class="key key-add" style="width:100%;">Iniciar sesión</button>
+    <button type="button" id="authSignUpBtn" class="key-small" style="width:100%;">Crear cuenta nueva</button>
+    <span class="brand-hint" style="text-align:center;">Con esta cuenta se sincronizan tu catálogo, ventas y fiados entre todos tus dispositivos.</span>
+  </div>
+</div>
 <div class="pos">
   <div class="pos-header">
     <p class="pos-title">Registro de Ventas</p>
     <div class="header-actions">
       <button type="button" id="brandToggle" class="history-btn">🏪 Mi bodega</button>
+      <button type="button" id="lockNowBtn" class="history-btn" hidden>🔒</button>
     </div>
   </div>
   <p class="storage-warning" id="storageWarning" hidden>⚠ El guardado automático no está disponible en esta vista. Descarga el archivo y ábrelo directamente en tu navegador para que funcione.</p>
@@ -588,6 +635,22 @@
         <input type="file" id="backupFileInput" accept="application/json" hidden>
       </div>
       <span class="brand-hint">Descarga un archivo .json con tu catálogo, historial y fiados. Guárdalo en tu correo o Drive por si algún día pierdes los datos de este navegador.</span>
+    </div>
+    <div class="brand-field">
+      <label>PIN de acceso</label>
+      <div class="backup-row" id="pinRow">
+        <input type="text" id="pinInput" inputmode="numeric" maxlength="4" placeholder="4 dígitos" style="max-width:100px;">
+        <button type="button" id="setPinBtn" class="key-small">Poner PIN</button>
+        <button type="button" id="removePinBtn" class="key-small" hidden>Quitar PIN</button>
+      </div>
+      <span class="brand-hint">Pide este PIN cada vez que se abre la app en este dispositivo. Es una traba simple contra miradas curiosas, no seguridad fuerte — cualquiera con conocimientos técnicos podría saltarla.</span>
+    </div>
+    <div class="brand-field" id="cloudField">
+      <label>Sincronización en la nube</label>
+      <div class="brand-hint" id="cloudStatus">No configurada todavía.</div>
+      <div class="backup-row">
+        <button type="button" id="cloudSignOutBtn" class="key-small" hidden>Cerrar sesión</button>
+      </div>
     </div>
   </div>
 
@@ -860,6 +923,32 @@
 </div>
 
 <script>
+  /* ---------- Firebase (sincronización en la nube) ----------
+     Para activar la sincronización entre tus dispositivos:
+     1. Ve a https://console.firebase.google.com y crea un proyecto (gratis).
+     2. Dentro del proyecto: "Compilación" → "Authentication" → "Comenzar" →
+        activa el método "Correo electrónico/contraseña".
+     3. "Compilación" → "Firestore Database" → "Crear base de datos" →
+        modo producción, cualquier región cercana (ej. us-central).
+     4. En "Configuración del proyecto" (el ícono de engranaje) → baja hasta
+        "Tus apps" → ícono web </> → registra una app (cualquier nombre) →
+        copia el objeto firebaseConfig que te muestra y pégalo abajo,
+        reemplazando estos valores de ejemplo.
+     Mientras estos valores digan "TU_...", la sincronización queda
+     desactivada y el sistema funciona exactamente igual que hasta ahora
+     (todo guardado solo en este navegador). No rompe nada. */
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDk5n8n975Mv2X6tGi5VC89rKoPhDwl1-Y",
+    authDomain: "mi-bodega-b9a1e.firebaseapp.com",
+    projectId: "mi-bodega-b9a1e",
+    storageBucket: "mi-bodega-b9a1e.firebasestorage.app",
+    messagingSenderId: "520640420423",
+    appId: "1:520640420423:web:21cb117da02034f0672f62"
+  };
+  const firebaseEnabled = FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('TU_');
+  let firebaseApp = null, firebaseAuth = null, firebaseDb = null, currentUser = null;
+  let applyingRemoteUpdate = false, cloudSyncTimer = null, cloudListenerUnsub = null;
+
   let items = [];
   let nextId = 1;
   let salesHistory = [];
@@ -877,7 +966,8 @@
     history: 'pos_sales_history_v1',
     catalog: 'pos_catalog_v1',
     branding: 'pos_branding_v1',
-    fiados: 'pos_fiados_v1'
+    fiados: 'pos_fiados_v1',
+    pin: 'pos_pin_v1'
   };
 
   const namePlaceholders = {
@@ -968,6 +1058,22 @@
   const scanOverlay = document.getElementById('scanOverlay');
   const scanStatus = document.getElementById('scanStatus');
   const scanCancel = document.getElementById('scanCancel');
+  const pinInput = document.getElementById('pinInput');
+  const setPinBtn = document.getElementById('setPinBtn');
+  const removePinBtn = document.getElementById('removePinBtn');
+  const lockOverlay = document.getElementById('lockOverlay');
+  const lockPinInput = document.getElementById('lockPinInput');
+  const lockError = document.getElementById('lockError');
+  const lockUnlockBtn = document.getElementById('lockUnlockBtn');
+  const lockNowBtn = document.getElementById('lockNowBtn');
+  const authOverlay = document.getElementById('authOverlay');
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const authError = document.getElementById('authError');
+  const authSignInBtn = document.getElementById('authSignInBtn');
+  const authSignUpBtn = document.getElementById('authSignUpBtn');
+  const cloudStatus = document.getElementById('cloudStatus');
+  const cloudSignOutBtn = document.getElementById('cloudSignOutBtn');
   let editingProductId = null;
   let expandedFiados = new Set();
 
@@ -1043,11 +1149,11 @@
     }
   }
   function saveCurrentTicket(){ safeSet(STORAGE_KEYS.ticket, JSON.stringify({ items, nextId })); }
-  function saveCurrency(){ safeSet(STORAGE_KEYS.currency, currencyInput.value); }
-  function saveHistory(){ safeSet(STORAGE_KEYS.history, JSON.stringify(salesHistory)); }
-  function saveCatalog(){ safeSet(STORAGE_KEYS.catalog, JSON.stringify(catalog)); }
-  function saveBranding(){ safeSet(STORAGE_KEYS.branding, JSON.stringify(branding)); }
-  function saveFiados(){ safeSet(STORAGE_KEYS.fiados, JSON.stringify(fiados)); }
+  function saveCurrency(){ safeSet(STORAGE_KEYS.currency, currencyInput.value); scheduleCloudSync(); }
+  function saveHistory(){ safeSet(STORAGE_KEYS.history, JSON.stringify(salesHistory)); scheduleCloudSync(); }
+  function saveCatalog(){ safeSet(STORAGE_KEYS.catalog, JSON.stringify(catalog)); scheduleCloudSync(); }
+  function saveBranding(){ safeSet(STORAGE_KEYS.branding, JSON.stringify(branding)); scheduleCloudSync(); }
+  function saveFiados(){ safeSet(STORAGE_KEYS.fiados, JSON.stringify(fiados)); scheduleCloudSync(); }
 
   /* ---------- respaldo (exportar / importar) ---------- */
   function buildBackupObject(){
@@ -1100,6 +1206,163 @@
     };
     reader.readAsText(file);
   });
+
+  /* ---------- Firebase: carga diferida del SDK ---------- */
+  let firebaseLibPromise = null;
+  function loadFirebaseLib(){
+    if (window.firebase && window.firebase.apps) return Promise.resolve();
+    if (firebaseLibPromise) return firebaseLibPromise;
+    function loadScript(src){
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('no se pudo cargar ' + src));
+        document.head.appendChild(s);
+      });
+    }
+    firebaseLibPromise = loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js')
+      .then(() => loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'))
+      .then(() => loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js'));
+    return firebaseLibPromise;
+  }
+
+  function setCloudStatus(text){ cloudStatus.textContent = text; }
+
+  function initFirebase(){
+    if (!firebaseEnabled) return;
+    setCloudStatus('Conectando...');
+    loadFirebaseLib().then(() => {
+      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+      firebaseAuth = firebase.auth();
+      firebaseDb = firebase.firestore();
+      firebaseAuth.onAuthStateChanged(user => {
+        currentUser = user;
+        if (user){
+          authOverlay.hidden = true;
+          setCloudStatus('Conectado como ' + user.email);
+          cloudSignOutBtn.hidden = false;
+          attachCloudListener(user.uid);
+        } else {
+          cloudSignOutBtn.hidden = true;
+          setCloudStatus('No has iniciado sesión — tus datos solo se guardan en este dispositivo.');
+          if (cloudListenerUnsub){ cloudListenerUnsub(); cloudListenerUnsub = null; }
+          authOverlay.hidden = false;
+          setTimeout(() => authEmail.focus(), 50);
+        }
+      });
+    }).catch(() => {
+      setCloudStatus('No se pudo cargar la sincronización (revisa tu conexión a internet).');
+    });
+  }
+
+  function attachCloudListener(uid){
+    if (cloudListenerUnsub) cloudListenerUnsub();
+    cloudListenerUnsub = firebaseDb.collection('stores').doc(uid).onSnapshot(doc => {
+      if (!doc.exists){
+        pushToCloud();
+        return;
+      }
+      const data = doc.data();
+      applyingRemoteUpdate = true;
+      if (Array.isArray(data.catalog)) catalog = data.catalog;
+      if (Array.isArray(data.salesHistory)) salesHistory = data.salesHistory;
+      if (Array.isArray(data.fiados)) fiados = data.fiados;
+      if (data.branding) branding = data.branding;
+      if (data.currency) currencyInput.value = data.currency;
+      saveCatalog(); saveHistory(); saveFiados(); saveBranding(); saveCurrency();
+      renderCatalog(); renderHistory(); renderFiados(); renderBrand(); render();
+      applyingRemoteUpdate = false;
+    }, () => {
+      setCloudStatus('Se perdió la conexión con la nube. Sigues pudiendo trabajar offline; se reconecta solo.');
+    });
+  }
+
+  function pushToCloud(){
+    if (!firebaseEnabled || !currentUser || !firebaseDb) return;
+    firebaseDb.collection('stores').doc(currentUser.uid).set({
+      catalog, salesHistory, fiados, branding,
+      currency: currencyInput.value,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(() => {
+      setCloudStatus('No se pudo sincronizar el último cambio (revisa tu conexión).');
+    });
+  }
+  function scheduleCloudSync(){
+    if (!firebaseEnabled || !currentUser || applyingRemoteUpdate) return;
+    clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(pushToCloud, 800);
+  }
+
+  authSignInBtn.addEventListener('click', () => {
+    authError.hidden = true;
+    firebaseAuth.signInWithEmailAndPassword(authEmail.value.trim(), authPassword.value)
+      .catch(err => { authError.textContent = traduceAuthError(err); authError.hidden = false; });
+  });
+  authSignUpBtn.addEventListener('click', () => {
+    authError.hidden = true;
+    firebaseAuth.createUserWithEmailAndPassword(authEmail.value.trim(), authPassword.value)
+      .catch(err => { authError.textContent = traduceAuthError(err); authError.hidden = false; });
+  });
+  cloudSignOutBtn.addEventListener('click', () => {
+    if (!confirm('¿Cerrar sesión de la nube en este dispositivo? Tus datos locales se quedan aquí, pero dejan de sincronizarse hasta que vuelvas a entrar.')) return;
+    firebaseAuth.signOut();
+  });
+  function traduceAuthError(err){
+    const map = {
+      'auth/invalid-email': 'Ese correo no parece válido.',
+      'auth/user-not-found': 'No existe una cuenta con ese correo. Usa "Crear cuenta nueva".',
+      'auth/wrong-password': 'Contraseña incorrecta.',
+      'auth/email-already-in-use': 'Ya existe una cuenta con ese correo. Usa "Iniciar sesión".',
+      'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.'
+    };
+    return map[err.code] || ('No se pudo completar: ' + err.message);
+  }
+
+  /* ---------- PIN de acceso ---------- */
+  function getPin(){ return safeGet(STORAGE_KEYS.pin); }
+  function refreshPinButtons(){
+    const has = !!getPin();
+    removePinBtn.hidden = !has;
+    setPinBtn.textContent = has ? 'Cambiar PIN' : 'Poner PIN';
+    lockNowBtn.hidden = !has;
+  }
+  function showLockOverlay(){
+    lockOverlay.hidden = false;
+    lockError.hidden = true;
+    lockPinInput.value = '';
+    setTimeout(() => lockPinInput.focus(), 50);
+  }
+  function tryUnlock(){
+    if (lockPinInput.value === getPin()){
+      lockOverlay.hidden = true;
+      lockPinInput.value = '';
+      lockError.hidden = true;
+    } else {
+      lockError.hidden = false;
+      lockPinInput.value = '';
+      lockPinInput.focus();
+    }
+  }
+  setPinBtn.addEventListener('click', () => {
+    const val = pinInput.value.trim();
+    if (!/^\d{4}$/.test(val)){
+      alert('El PIN debe ser de exactamente 4 dígitos.');
+      return;
+    }
+    safeSet(STORAGE_KEYS.pin, val);
+    pinInput.value = '';
+    refreshPinButtons();
+    alert('Listo, ya tienes PIN puesto. Se te va a pedir cada vez que abras la app en este dispositivo.');
+  });
+  removePinBtn.addEventListener('click', () => {
+    if (!confirm('¿Quitar el PIN de acceso de este dispositivo?')) return;
+    localStorage.removeItem(STORAGE_KEYS.pin);
+    refreshPinButtons();
+  });
+  lockUnlockBtn.addEventListener('click', tryUnlock);
+  lockPinInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+  lockNowBtn.addEventListener('click', showLockOverlay);
 
   /* ---------- modal (peso / monto) ---------- */
   function openModal(opts, onConfirm){
@@ -2449,6 +2712,9 @@
   renderCatalog();
   renderBrand();
   renderFiados();
+  refreshPinButtons();
+  if (getPin()) showLockOverlay();
+  initFirebase();
 
   if ('serviceWorker' in navigator){
     window.addEventListener('load', () => {
