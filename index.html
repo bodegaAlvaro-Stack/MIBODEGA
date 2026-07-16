@@ -36,13 +36,23 @@
   body{
     margin:0;
     font-family:'Inter',system-ui,sans-serif;
-    background:transparent;
+    background:#E9E5D8;
     color:var(--paper-ink);
     display:flex;
     justify-content:center;
-    padding:24px 12px;
+    padding:32px 16px;
   }
-  .pos{ width:100%; max-width:960px; }
+  .pos{
+    width:100%; max-width:960px;
+    background:#FFFDF9;
+    border-radius:20px;
+    padding:22px 22px 30px;
+    box-shadow:0 24px 60px rgba(0,0,0,0.12);
+  }
+  @media (max-width:640px){
+    body{ padding:12px 8px; }
+    .pos{ border-radius:14px; padding:14px 12px 20px; }
+  }
   .pos-header{
     display:flex; justify-content:space-between; align-items:center;
     margin:0 0 6px 4px; flex-wrap:wrap; gap:8px;
@@ -610,6 +620,17 @@
   .modal-box .field input#editProdCategoryNew{ margin-top:6px; }
   .modal-actions{ display:flex; gap:8px; }
   .modal-actions .key{ flex:1; }
+  @media print{
+    body{ background:#fff !important; padding:0 !important; }
+    .pos{ box-shadow:none !important; border-radius:0 !important; max-width:100% !important; padding:0 !important; }
+    .pos-header, .storage-warning, .brand-panel, .page-nav, .lock-overlay, .modal-overlay,
+    .dash-period-tabs, .no-print{
+      display:none !important;
+    }
+    .page:not(#pageDashboard){ display:none !important; }
+    .dash-panel{ box-shadow:none !important; padding:0 !important; }
+    .dash-bar-tooltip{ display:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -872,6 +893,7 @@
     <div class="dash-panel">
       <div class="history-panel-head">
         <h3>📊 Dashboard</h3>
+        <button type="button" id="exportDashboardBtn" class="key-small no-print">🖨️ Exportar a PDF</button>
       </div>
       <div class="dash-period-tabs" id="dashPeriodTabs">
         <button type="button" class="dash-period-btn" data-period="today">Hoy</button>
@@ -887,6 +909,7 @@
     <div class="history-panel-head">
       <h3>Historial de ventas</h3>
       <div class="history-head-actions">
+        <button type="button" id="exportHistoryBtn" class="key-small">⬇️ Exportar (Excel)</button>
         <button type="button" id="undoLastSaleBtn" class="key-small">↩️ Deshacer última venta</button>
         <button type="button" id="clearHistoryBtn" class="key-small">Vaciar historial</button>
       </div>
@@ -1950,11 +1973,35 @@
   }
 
   let selectedCategory = null;
+  const PRESET_CATEGORIES = [
+    'Abarrotes', 'Bebidas', 'Snacks', 'Lácteos', 'Panadería',
+    'Verduras y frutas', 'Congelados', 'Limpieza', 'Cuidado personal', 'Otros'
+  ];
+  const CATEGORY_STYLES = {
+    'Abarrotes': { icon: '🛒', color: '#8B5E34' },
+    'Bebidas': { icon: '🥤', color: '#1C7A57' },
+    'Snacks': { icon: '🍿', color: '#C97B2E' },
+    'Lácteos': { icon: '🥛', color: '#4A90A4' },
+    'Panadería': { icon: '🍞', color: '#B4763A' },
+    'Verduras y frutas': { icon: '🥦', color: '#3E8E41' },
+    'Congelados': { icon: '🧊', color: '#3C7DBF' },
+    'Limpieza': { icon: '🧼', color: '#5B7FBF' },
+    'Cuidado personal': { icon: '🧴', color: '#B15FA0' },
+    'Otros': { icon: '🏷️', color: '#7A7986' }
+  };
+  const CATEGORY_FALLBACK_COLORS = ['#8B5E34','#1C7A57','#C97B2E','#4A90A4','#B4763A','#3E8E41','#3C7DBF','#5B7FBF','#B15FA0','#A0522D','#2E8B8B','#8B4A6B'];
+  function categoryStyle(name){
+    if (CATEGORY_STYLES[name]) return CATEGORY_STYLES[name];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    return { icon: '🏷️', color: CATEGORY_FALLBACK_COLORS[hash % CATEGORY_FALLBACK_COLORS.length] };
+  }
   function populateCategorySelect(selectEl, keepValue){
-    const cats = [...new Set(catalog.map(p => p.category).filter(Boolean))].sort();
+    const usedCats = [...new Set(catalog.map(p => p.category).filter(Boolean))];
+    const cats = [...new Set([...PRESET_CATEGORIES, ...usedCats])].sort();
     const prev = keepValue !== undefined ? keepValue : selectEl.value;
     selectEl.innerHTML = '<option value="">Sin categoría</option>' +
-      cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('') +
+      cats.map(c => `<option value="${escapeHtml(c)}">${categoryStyle(c).icon} ${escapeHtml(c)}</option>`).join('') +
       '<option value="__new__">➕ Nueva categoría...</option>';
     if (prev && (cats.includes(prev) || prev === '__new__')) selectEl.value = prev;
   }
@@ -1968,7 +2015,14 @@
     }
     if (selectedCategory && !cats.includes(selectedCategory)) selectedCategory = null;
     const chips = ['<button type="button" class="category-chip' + (selectedCategory === null ? ' active' : '') + '" data-cat="">Todas</button>']
-      .concat(cats.map(c => `<button type="button" class="category-chip${selectedCategory === c ? ' active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`));
+      .concat(cats.map(c => {
+        const st = categoryStyle(c);
+        const active = selectedCategory === c;
+        const style = active
+          ? `style="background:${st.color};border-color:${st.color};"`
+          : `style="border-color:${st.color}66;color:${st.color};"`;
+        return `<button type="button" class="category-chip${active ? ' active' : ''}" data-cat="${escapeHtml(c)}" ${style}>${st.icon} ${escapeHtml(c)}</button>`;
+      }));
     categoryChips.innerHTML = chips.join('');
   }
   categoryChips.addEventListener('click', e => {
@@ -2704,6 +2758,39 @@
     saveHistory();
     renderHistory();
   });
+
+  function csvEscape(val){
+    const s = String(val === undefined || val === null ? '' : val);
+    if (/[",\r\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  function exportHistoryCsv(){
+    if (!salesHistory.length){
+      alert('No hay ventas registradas todavía para exportar.');
+      return;
+    }
+    const headers = ['Fecha', 'Hora', 'Productos', 'Total', 'Moneda', 'Forma de pago', 'Cliente'];
+    const rows = salesHistory.map(rec => {
+      const d = new Date(rec.date);
+      const fecha = d.toLocaleDateString('es-PE');
+      const hora = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+      const productos = (rec.items || []).map(it => `${it.name} x${it.qty}`).join(' | ');
+      return [fecha, hora, productos, rec.total.toFixed(2), rec.currency || currency(), paymentLabel(rec.paymentMethod), rec.customerName || ''];
+    });
+    const csvLines = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob(['\uFEFF' + csvLines], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `historial_ventas_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  }
+  document.getElementById('exportHistoryBtn').addEventListener('click', exportHistoryCsv);
+  document.getElementById('exportDashboardBtn').addEventListener('click', () => window.print());
 
   document.getElementById('undoLastSaleBtn').addEventListener('click', () => {
     if (!salesHistory.length){
