@@ -43,7 +43,7 @@
     padding:32px 16px;
   }
   .pos{
-    width:100%; max-width:960px;
+    width:100%; max-width:1120px;
     background:#FFFDF9;
     border-radius:20px;
     padding:22px 22px 30px;
@@ -100,6 +100,14 @@
     font-size:11px; letter-spacing:0.06em; cursor:pointer;
   }
   .dash-period-btn.active{ background:var(--felt); color:#fff; border-color:var(--felt); }
+  .dash-tabs{ display:flex; gap:6px; margin-bottom:16px; border-bottom:1px solid var(--paper-line); }
+  .dash-tab-btn{
+    background:none; border:none; border-bottom:2px solid transparent; color:var(--paper-fade);
+    padding:8px 4px; margin-right:14px; font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    cursor:pointer;
+  }
+  .dash-tab-btn:hover{ color:var(--paper-ink); }
+  .dash-tab-btn.active{ color:var(--felt); border-bottom-color:var(--felt); }
   .plans-grid{ display:flex; gap:10px; flex-wrap:wrap; margin:4px 0 10px; }
   .plan-card{
     flex:1; min-width:130px; background:#fff; border:1px solid var(--paper-line);
@@ -110,6 +118,15 @@
   .plan-card-price{ font-family:'Space Mono',monospace; font-weight:700; font-size:20px; color:var(--felt); }
   .plan-card-price .plan-card-period{ font-size:11px; font-weight:400; color:var(--paper-fade); }
   .plan-card .key{ width:100%; padding:8px 10px; font-size:11.5px; }
+  .plan-benefits{
+    list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px;
+    text-align:left; width:100%;
+  }
+  .plan-benefits li{
+    font-family:'Inter',sans-serif; font-size:11.5px; color:var(--paper-ink); line-height:1.3;
+    padding-left:18px; position:relative;
+  }
+  .plan-benefits li::before{ content:'✓'; position:absolute; left:0; color:var(--felt); font-weight:700; }
   .dash-cards{ display:flex; flex-wrap:wrap; gap:12px; margin-bottom:18px; }
   .dash-card{
     flex:1; min-width:150px; background:#fff; border:1px solid var(--paper-line);
@@ -159,10 +176,10 @@
     background:#fff; border:1px dashed var(--paper-line); border-radius:8px; padding:10px 12px;
   }
   .layout{
-    display:grid; grid-template-columns:320px 1fr; gap:0;
+    display:grid; grid-template-columns:420px 1fr; gap:0;
     border-radius:14px; overflow:hidden; box-shadow:0 18px 40px rgba(0,0,0,0.18);
   }
-  @media (max-width:900px){ .layout{ grid-template-columns:1fr; } }
+  @media (max-width:980px){ .layout{ grid-template-columns:1fr; } }
 
   /* ---------- REGISTER PANEL ---------- */
   .register{ background:var(--ink); padding:22px 20px 26px; display:flex; flex-direction:column; gap:16px; min-width:0; }
@@ -1003,6 +1020,11 @@
         <button type="button" class="dash-period-btn active" data-period="week">Últimos 7 días</button>
         <button type="button" class="dash-period-btn" data-period="month">Últimos 30 días</button>
       </div>
+      <div class="dash-tabs no-print" id="dashTabs">
+        <button type="button" class="dash-tab-btn active" data-tab="ventas">💰 Ventas</button>
+        <button type="button" class="dash-tab-btn" data-tab="productos">📦 Productos</button>
+        <button type="button" class="dash-tab-btn" data-tab="stock">🏷️ Stock</button>
+      </div>
       <div id="dashContent"></div>
     </div>
   </div>
@@ -1153,8 +1175,15 @@
      que ya hacías — esto no cobra nada automáticamente, solo ordena el pedido. */
   const OWNER_WHATSAPP = '51929932906'; // tu número de WhatsApp (con código de país, sin +)
   const PLANS_CATALOG = [
-    { id: 'basico', name: 'Plan Básico', prices: { mensual: 19, semestral: 100, anual: 190 } },
-    { id: 'pro', name: 'Plan Pro', prices: { mensual: 25, semestral: 135, anual: 250 } }
+    { id: 'unico', name: 'Suscripción Mi Bodega', prices: { mensual: 25, semestral: 140, anual: 200 },
+      benefits: [
+        'Catálogo de productos ilimitado',
+        'Control de ventas, fiados y stock',
+        'Dashboard con reportes y ganancias',
+        'Sincronización entre todos tus dispositivos',
+        'Respaldo y restauración de tus datos',
+        'Soporte directo por WhatsApp'
+      ] }
   ];
   const BILLING_PERIODS = [
     { id: 'mensual', label: 'Mensual' },
@@ -1588,9 +1617,11 @@
   function renderPlanCards(container, period){
     container.innerHTML = PLANS_CATALOG.map(p => {
       const price = p.prices[period];
+      const benefitsHtml = (p.benefits || []).map(b => `<li>${escapeHtml(b)}</li>`).join('');
       return `<div class="plan-card">
         <div class="plan-card-name">${escapeHtml(p.name)}</div>
         <div class="plan-card-price">S/${price}<span class="plan-card-period">${PERIOD_SUFFIX[period]}</span></div>
+        <ul class="plan-benefits">${benefitsHtml}</ul>
         <button type="button" class="key key-add plan-choose-btn" data-plan-id="${p.id}" data-period-id="${period}">Elegir</button>
       </div>`;
     }).join('');
@@ -1661,8 +1692,8 @@
         return;
       }
       const data = doc.data();
-      const today = new Date().toISOString().slice(0, 10);
-      const expired = data.status === 'vencido' || (data.expiresAt && data.expiresAt < today);
+      const expiresDate = data.expiresAt && data.expiresAt.toDate ? data.expiresAt.toDate() : null;
+      const expired = data.status === 'vencido' || (expiresDate && expiresDate < new Date());
       if (expired){
         subOverlayMsg.textContent = 'Tu acceso está pausado' + (data.plan ? ' (' + data.plan + ')' : '') +
           '. Elige un plan abajo para reactivarlo.';
@@ -1694,18 +1725,34 @@
       }
       const rows = [];
       snap.forEach(doc => rows.push({ uid: doc.id, ...doc.data() }));
-      rows.sort((a, b) => (a.plan ? 1 : 0) - (b.plan ? 1 : 0));
+      const now = new Date();
+      rows.forEach(c => {
+        c._expiresDate = c.expiresAt && c.expiresAt.toDate ? c.expiresAt.toDate() : null;
+        c._daysLeft = c._expiresDate ? Math.ceil((c._expiresDate - now) / 86400000) : null;
+        c._soon = (c.status || 'activo') === 'activo' && c._daysLeft !== null && c._daysLeft >= 0 && c._daysLeft <= 5;
+      });
+      rows.sort((a, b) => {
+        const aPending = a.plan ? 1 : 0, bPending = b.plan ? 1 : 0;
+        if (aPending !== bPending) return aPending - bPending;
+        const aSoon = a._soon ? 0 : 1, bSoon = b._soon ? 0 : 1;
+        if (aSoon !== bSoon) return aSoon - bSoon;
+        return 0;
+      });
       const pendingCount = rows.filter(c => !c.plan).length;
-      const banner = pendingCount
-        ? `<div class="fiado-overdue-banner">🆕 ${pendingCount} cuenta${pendingCount === 1 ? '' : 's'} nueva${pendingCount === 1 ? '' : 's'} sin plan asignado — revísalas abajo.</div>`
-        : '';
+      const soonCount = rows.filter(c => c._soon).length;
+      const banners = [];
+      if (pendingCount) banners.push(`🆕 ${pendingCount} cuenta${pendingCount === 1 ? '' : 's'} nueva${pendingCount === 1 ? '' : 's'} sin plan asignado`);
+      if (soonCount) banners.push(`⏳ ${soonCount} cuenta${soonCount === 1 ? '' : 's'} por vencer en los próximos 5 días`);
+      const banner = banners.length ? `<div class="fiado-overdue-banner">${banners.join(' · ')} — revísalas abajo.</div>` : '';
       adminClientsList.innerHTML = banner + rows.map(c => {
         const status = c.status || 'activo';
         const pending = !c.plan;
+        const expiresLabel = c._expiresDate ? c._expiresDate.toLocaleDateString('es-PE') : '';
+        const soonBadge = c._soon ? `<span class="admin-client-status prueba">VENCE EN ${c._daysLeft}D</span>` : '';
         return `<div class="admin-client${pending ? ' admin-client-pending' : ''}" data-uid="${escapeHtml(c.uid)}">
           <div>
-            <div class="history-date">${pending ? '🆕 ' : ''}${escapeHtml(c.plan || 'Sin plan asignado')}<span class="admin-client-status ${status}">${status.toUpperCase()}</span></div>
-            <div class="history-meta">${c.email ? escapeHtml(c.email) + ' · ' : ''}${escapeHtml(c.uid)}${c.expiresAt ? ' · vence ' + c.expiresAt : ''}${c.notes ? ' · ' + escapeHtml(c.notes) : ''}${c.requestedPlan && c.requestedPlan !== c.plan ? ' · 🙋 pidió: ' + escapeHtml(c.requestedPlan) : ''}</div>
+            <div class="history-date">${pending ? '🆕 ' : ''}${escapeHtml(c.plan || 'Sin plan asignado')}<span class="admin-client-status ${status}">${status.toUpperCase()}</span>${soonBadge}</div>
+            <div class="history-meta">${c.email ? escapeHtml(c.email) + ' · ' : ''}${escapeHtml(c.uid)}${expiresLabel ? ' · vence ' + expiresLabel : ''}${c.notes ? ' · ' + escapeHtml(c.notes) : ''}${c.requestedPlan && c.requestedPlan !== c.plan ? ' · 🙋 pidió: ' + escapeHtml(c.requestedPlan) : ''}</div>
           </div>
           <div class="admin-client-actions">
             <button type="button" class="key-small admin-edit-btn" data-uid="${escapeHtml(c.uid)}">✏️ Editar</button>
@@ -1739,7 +1786,7 @@
           adminPlanCustom.value = '';
         }
         adminStatus.value = d.status || 'activo';
-        adminExpires.value = d.expiresAt || '';
+        adminExpires.value = d.expiresAt && d.expiresAt.toDate ? d.expiresAt.toDate().toISOString().slice(0, 10) : '';
         adminNotes.value = d.notes || '';
         adminUid.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
@@ -1758,7 +1805,7 @@
     const payload = {
       plan: planValue,
       status: adminStatus.value,
-      expiresAt: adminExpires.value || '',
+      expiresAt: adminExpires.value ? firebase.firestore.Timestamp.fromDate(new Date(adminExpires.value + 'T23:59:59')) : null,
       notes: adminNotes.value.trim()
     };
     adminFormMsg.textContent = 'Guardando...';
@@ -2149,6 +2196,7 @@
   function fmtQty(n){
     return Number.isInteger(n) ? String(n) : n.toFixed(3);
   }
+  let dashboardTab = 'ventas';
   function renderDashboard(){
     const { curStart, curEnd, prevStart, prevEnd, days } = periodRanges(dashboardPeriod);
     const curSales = salesBetween(curStart, curEnd);
@@ -2158,14 +2206,12 @@
     const cd = currency();
     const periodLabel = dashboardPeriod === 'today' ? 'hoy' : dashboardPeriod === 'month' ? 'en 30 días' : 'en 7 días';
 
-    let html = '';
-
+    /* ---------- pestaña: Ventas ---------- */
+    let htmlVentas = '';
     if (!curSales.length){
-      html += `<div class="dash-hint">Aún no hay ventas registradas ${periodLabel === 'hoy' ? 'hoy' : periodLabel}. En cuanto cobres algo, este panel se va a llenar solo.</div>`;
+      htmlVentas += `<div class="dash-hint">Aún no hay ventas registradas ${periodLabel === 'hoy' ? 'hoy' : periodLabel}. En cuanto cobres algo, este panel se va a llenar solo.</div>`;
     }
-
-    // Cards
-    html += `<div class="dash-cards">
+    htmlVentas += `<div class="dash-cards">
       <div class="dash-card">
         <span class="dash-card-label">Total vendido ${periodLabel}</span>
         <div class="dash-card-value">${fmt(cur.total, cd)}</div>
@@ -2182,20 +2228,16 @@
         <div class="dash-card-delta flat">${fmt(cur.byMethod.fiado, cd)} fiado ${periodLabel}</div>
       </div>
     </div>`;
-
-    // Métodos de pago
-    html += `<div class="dash-section-title">Métodos de pago</div>
+    htmlVentas += `<div class="dash-section-title">Métodos de pago</div>
     <div class="day-summary-breakdown">
       <div class="day-summary-chip dsc-efectivo"><span class="dsc-label">💵 Efectivo</span><span class="dsc-amount">${fmt(cur.byMethod.efectivo, cd)}</span></div>
       <div class="day-summary-chip dsc-yape"><span class="dsc-label">📱 Yape</span><span class="dsc-amount">${fmt(cur.byMethod.yape, cd)}</span></div>
       <div class="day-summary-chip dsc-fiado"><span class="dsc-label">📓 Fiado</span><span class="dsc-amount">${fmt(cur.byMethod.fiado, cd)}</span></div>
     </div>`;
-
-    // Chart (solo para semana/mes)
     if (dashboardPeriod !== 'today'){
       const daily = dailyTotals(curStart, curEnd);
       const max = Math.max(...daily.map(d => d.total), 0.01);
-      html += `<div class="dash-section-title">Ventas por día</div>
+      htmlVentas += `<div class="dash-section-title">Ventas por día</div>
       <div class="dash-chart">
         ${daily.map(d => {
           const h = Math.max((d.total / max) * 100, 2);
@@ -2207,15 +2249,15 @@
       </div>`;
     }
 
-    // Productos
+    /* ---------- pestaña: Productos ---------- */
+    let htmlProductos = '';
     const agg = productAgg(curSales);
     const byQty = [...agg].sort((a, b) => b.qty - a.qty).slice(0, 5);
     const byRevenue = [...agg].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
-
-    html += `<div class="dash-section-title">Productos</div>
+    htmlProductos += `<div class="dash-section-title">Más vendidos</div>
     <div class="dash-two-col">
       <div>
-        <div class="dash-card-label" style="margin-bottom:8px;">Más vendidos (cantidad)</div>
+        <div class="dash-card-label" style="margin-bottom:8px;">Por cantidad</div>
         <div class="dash-list">
           ${byQty.length ? byQty.map(p => `
             <div class="dash-list-item">
@@ -2236,15 +2278,14 @@
       </div>
     </div>`;
 
-    // Ganancia (si hay costo registrado)
     const withCost = agg.filter(p => p.hasCost);
-    html += `<div class="dash-section-title">Ganancia estimada</div>`;
+    htmlProductos += `<div class="dash-section-title">Ganancia estimada</div>`;
     if (!withCost.length){
-      html += `<div class="dash-hint">Agrega el "Costo (opcional)" a tus productos (al crearlos o editándolos) para ver aquí cuánto estás ganando de verdad, no solo cuánto vendes.</div>`;
+      htmlProductos += `<div class="dash-hint">Agrega el "Costo (opcional)" a tus productos (al crearlos o editándolos) para ver aquí cuánto estás ganando de verdad, no solo cuánto vendes.</div>`;
     } else {
       const totalProfit = withCost.reduce((s, p) => s + (p.revenue - p.cost), 0);
       const topProfit = [...withCost].sort((a, b) => (b.revenue - b.cost) - (a.revenue - a.cost)).slice(0, 5);
-      html += `<div class="dash-cards">
+      htmlProductos += `<div class="dash-cards">
         <div class="dash-card">
           <span class="dash-card-label">Ganancia ${periodLabel} (solo prod. con costo)</span>
           <div class="dash-card-value">${fmt(totalProfit, cd)}</div>
@@ -2259,7 +2300,6 @@
       </div>`;
     }
 
-    // Productos dormidos (todo el historial, no solo el periodo)
     const catalogWithSales = catalog.map(prod => {
       const sales = salesHistory.filter(rec => (rec.items || []).some(it => it.name.toLowerCase() === prod.name.toLowerCase()));
       let lastDate = null;
@@ -2271,11 +2311,11 @@
       .filter(p => p.daysSince === null || p.daysSince >= 14)
       .sort((a, b) => (b.daysSince ?? 9999) - (a.daysSince ?? 9999))
       .slice(0, 8);
-    html += `<div class="dash-section-title">Productos dormidos (14+ días sin venderse)</div>`;
+    htmlProductos += `<div class="dash-section-title">Productos dormidos (14+ días sin venderse)</div>`;
     if (!dormant.length){
-      html += `<div class="dash-hint">Todo tu catálogo se ha vendido en los últimos 14 días. 👍</div>`;
+      htmlProductos += `<div class="dash-hint">Todo tu catálogo se ha vendido en los últimos 14 días. 👍</div>`;
     } else {
-      html += `<div class="dash-list">
+      htmlProductos += `<div class="dash-list">
         ${dormant.map(p => `
           <div class="dash-list-item">
             <span class="dli-name">${escapeHtml(p.name)}</span>
@@ -2284,15 +2324,18 @@
       </div>`;
     }
 
-    // Stock bajo
+    /* ---------- pestaña: Stock ---------- */
+    let htmlStock = '';
     const tracked = catalog.filter(p => typeof p.stock === 'number');
-    if (tracked.length){
+    if (!tracked.length){
+      htmlStock += `<div class="dash-hint">Todavía no le pusiste stock a ningún producto. Agrégalo al crear o editar un producto para ver esta sección.</div>`;
+    } else {
       const lowStock = tracked.filter(p => p.stock <= 3).sort((a, b) => a.stock - b.stock).slice(0, 10);
-      html += `<div class="dash-section-title">Stock bajo</div>`;
+      htmlStock += `<div class="dash-section-title">Stock bajo</div>`;
       if (!lowStock.length){
-        html += `<div class="dash-hint">Ningún producto con stock registrado está bajo (3 o menos). 👍</div>`;
+        htmlStock += `<div class="dash-hint">Ningún producto con stock registrado está bajo (3 o menos). 👍</div>`;
       } else {
-        html += `<div class="dash-list">
+        htmlStock += `<div class="dash-list">
           ${lowStock.map(p => `
             <div class="dash-list-item">
               <span class="dli-name">${escapeHtml(p.name)}</span>
@@ -2302,7 +2345,8 @@
       }
     }
 
-    dashContent.innerHTML = html;
+    const tabsHtml = { ventas: htmlVentas, productos: htmlProductos, stock: htmlStock };
+    dashContent.innerHTML = tabsHtml[dashboardTab] || htmlVentas;
   }
 
   function renderHistory(){
@@ -3297,6 +3341,14 @@
     if (!btn) return;
     dashboardPeriod = btn.dataset.period;
     dashPeriodTabs.querySelectorAll('.dash-period-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderDashboard();
+  });
+  const dashTabs = document.getElementById('dashTabs');
+  dashTabs.addEventListener('click', e => {
+    const btn = e.target.closest('.dash-tab-btn');
+    if (!btn) return;
+    dashboardTab = btn.dataset.tab;
+    dashTabs.querySelectorAll('.dash-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
     renderDashboard();
   });
 
