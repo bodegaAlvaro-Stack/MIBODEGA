@@ -379,6 +379,24 @@
   }
   .paper-search:focus{ border-color:var(--felt-light); }
   .paper-search::placeholder{ color:var(--paper-fade); }
+  .admin-form{ display:flex; flex-direction:column; gap:2px; margin-bottom:6px; }
+  .admin-form label{
+    font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.06em;
+    color:var(--paper-fade); text-transform:uppercase; display:block; margin-bottom:4px;
+  }
+  .admin-client{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:10px 0; border-bottom:1px dotted var(--paper-line);
+  }
+  .admin-client-status{
+    font-family:'Space Mono',monospace; font-size:10px; padding:2px 8px; border-radius:10px;
+    display:inline-block; margin-left:8px;
+  }
+  .admin-client-status.activo{ background:var(--felt); color:#fff; }
+  .admin-client-status.prueba{ background:var(--yape); color:#fff; }
+  .admin-client-status.vencido{ background:var(--maroon); color:#fff; }
+  .admin-client-actions{ display:flex; gap:6px; flex-wrap:wrap; }
+  .admin-client-pending{ background:#FFF8E8; margin:0 -12px; padding:10px 12px !important; border-radius:8px; }
   .fiado-fields label, .customer-phone-field label{
     font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.06em;
     color:var(--paper-fade); text-transform:uppercase; display:block; margin-bottom:4px;
@@ -655,6 +673,16 @@
     <span class="brand-hint" style="text-align:center;">Con esta cuenta se sincronizan tu catálogo, ventas y fiados entre todos tus dispositivos.</span>
   </div>
 </div>
+<div class="lock-overlay" id="subOverlay" hidden>
+  <div class="lock-box" style="max-width:320px;">
+    <div class="lock-icon">⏸️</div>
+    <div class="lock-title" id="subOverlayTitle">Suscripción vencida</div>
+    <p class="brand-hint" id="subOverlayMsg" style="text-align:center; font-size:12.5px;">
+      Tu acceso está pausado. Contacta a quien te dio de alta para reactivarlo.
+    </p>
+    <button type="button" id="subOverlaySignOut" class="key-small" style="width:100%;">Cerrar sesión</button>
+  </div>
+</div>
 <div class="pos">
   <div class="pos-header">
     <p class="pos-title">Registro de Ventas</p>
@@ -701,6 +729,11 @@
     <div class="brand-field" id="cloudField">
       <label>Sincronización en la nube</label>
       <div class="brand-hint" id="cloudStatus">No configurada todavía.</div>
+      <div class="backup-row" id="myUidRow" hidden>
+        <input type="text" id="myUidDisplay" class="paper-search" readonly style="margin-bottom:0; flex:1; font-family:'Space Mono',monospace; font-size:11px;">
+        <button type="button" id="copyUidBtn" class="key-small">Copiar</button>
+      </div>
+      <span class="brand-hint" id="myUidHint" hidden>Este es tu ID — cópialo y mándaselo por WhatsApp a quien te dio de alta, para que active tu cuenta.</span>
       <div class="backup-row">
         <button type="button" id="cloudSignOutBtn" class="key-small" hidden>Cerrar sesión</button>
       </div>
@@ -712,6 +745,7 @@
     <button type="button" class="nav-btn" data-page="dashboard">📊 Dashboard</button>
     <button type="button" class="nav-btn" data-page="historial">🕒 Historial <span id="historyCount">(0)</span></button>
     <button type="button" class="nav-btn" data-page="fiados">📓 Fiados <span id="fiadosCount">(0)</span></button>
+    <button type="button" class="nav-btn" data-page="admin" id="adminNavBtn" hidden>🛠️ Admin</button>
   </nav>
 
   <div class="page" id="pageFiados" hidden>
@@ -721,6 +755,48 @@
     </div>
     <input type="text" id="fiadosSearch" class="paper-search" placeholder="🔎 Buscar cliente...">
     <div class="history-list" id="fiadosList"></div>
+  </div>
+  </div>
+
+  <div class="page" id="pageAdmin" hidden>
+  <div class="history-panel" id="adminPanel">
+    <div class="history-panel-head">
+      <h3>🛠️ Administrador — suscripciones</h3>
+    </div>
+    <div class="admin-form">
+      <div class="field">
+        <label for="adminUid">UID del cliente</label>
+        <input type="text" id="adminUid" class="paper-search" placeholder="Pega aquí el UID de Firebase del cliente">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="adminPlan">Plan</label>
+          <input type="text" id="adminPlan" class="paper-search" placeholder="Ej. Plan Básico S/29/mes">
+        </div>
+        <div class="field">
+          <label for="adminStatus">Estado</label>
+          <select id="adminStatus" class="paper-search">
+            <option value="activo">Activo</option>
+            <option value="prueba">Prueba</option>
+            <option value="vencido">Vencido</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="adminExpires">Vence el (opcional)</label>
+          <input type="date" id="adminExpires" class="paper-search">
+        </div>
+        <div class="field">
+          <label for="adminNotes">Notas (opcional)</label>
+          <input type="text" id="adminNotes" class="paper-search" placeholder="Ej. correo, teléfono...">
+        </div>
+      </div>
+      <button type="button" id="adminSaveBtn" class="key key-add" style="width:100%;">Guardar cliente</button>
+      <div class="brand-hint" id="adminFormMsg"></div>
+    </div>
+    <div class="dash-section-title" style="margin-top:22px;">Clientes registrados</div>
+    <div class="history-list" id="adminClientsList"></div>
   </div>
   </div>
 
@@ -1032,6 +1108,17 @@
   let firebaseApp = null, firebaseAuth = null, firebaseDb = null, currentUser = null;
   let applyingRemoteUpdate = false, cloudSyncTimer = null, cloudListenerUnsub = null;
 
+  /* ---------- Panel de administrador (suscripciones) ----------
+     Pega aquí tu propio UID de Firebase (no tu correo) para que el
+     panel de administrador aparezca solo cuando entras con TU cuenta.
+     Cómo encontrarlo: consola de Firebase → Authentication → pestaña
+     "Usuarios" → columna "UID del usuario", cópialo de tu propia fila.
+     Puedes poner más de uno si algún día quieres que otra persona
+     también administre. Mientras diga "PON_AQUI_TU_UID", el panel de
+     administrador queda oculto y nadie ve restricciones de suscripción. */
+  const ADMIN_UIDS = ['bsYnSiMk82bOPQvIQckVxBAY5Ch1'];
+  function isAdminUid(uid){ return ADMIN_UIDS.includes(uid); }
+
   let items = [];
   let nextId = 1;
   let salesHistory = [];
@@ -1166,6 +1253,22 @@
   const authSignUpBtn = document.getElementById('authSignUpBtn');
   const cloudStatus = document.getElementById('cloudStatus');
   const cloudSignOutBtn = document.getElementById('cloudSignOutBtn');
+  const myUidRow = document.getElementById('myUidRow');
+  const myUidDisplay = document.getElementById('myUidDisplay');
+  const myUidHint = document.getElementById('myUidHint');
+  const copyUidBtn = document.getElementById('copyUidBtn');
+  const subOverlay = document.getElementById('subOverlay');
+  const subOverlayMsg = document.getElementById('subOverlayMsg');
+  const subOverlaySignOut = document.getElementById('subOverlaySignOut');
+  const adminNavBtn = document.getElementById('adminNavBtn');
+  const adminUid = document.getElementById('adminUid');
+  const adminPlan = document.getElementById('adminPlan');
+  const adminStatus = document.getElementById('adminStatus');
+  const adminExpires = document.getElementById('adminExpires');
+  const adminNotes = document.getElementById('adminNotes');
+  const adminSaveBtn = document.getElementById('adminSaveBtn');
+  const adminFormMsg = document.getElementById('adminFormMsg');
+  const adminClientsList = document.getElementById('adminClientsList');
   let editingProductId = null;
   let expandedFiados = new Set();
 
@@ -1334,12 +1437,20 @@
           authOverlay.hidden = true;
           setCloudStatus('Conectado como ' + user.email);
           cloudSignOutBtn.hidden = false;
+          myUidRow.hidden = false;
+          myUidHint.hidden = false;
+          myUidDisplay.value = user.uid;
           attachCloudListener(user.uid);
+          checkSubscription(user);
         } else {
           cloudSignOutBtn.hidden = true;
+          myUidRow.hidden = true;
+          myUidHint.hidden = true;
           setCloudStatus('No has iniciado sesión — tus datos solo se guardan en este dispositivo.');
           if (cloudListenerUnsub){ cloudListenerUnsub(); cloudListenerUnsub = null; }
           authOverlay.hidden = false;
+          subOverlay.hidden = true;
+          adminNavBtn.hidden = true;
           setTimeout(() => authEmail.focus(), 50);
         }
       });
@@ -1394,6 +1505,17 @@
   authSignUpBtn.addEventListener('click', () => {
     authError.hidden = true;
     firebaseAuth.createUserWithEmailAndPassword(authEmail.value.trim(), authPassword.value)
+      .then(cred => {
+        if (isAdminUid(cred.user.uid)) return;
+        firebaseDb.collection('subscriptions').doc(cred.user.uid).set({
+          email: cred.user.email,
+          plan: '',
+          status: 'prueba',
+          expiresAt: '',
+          notes: '',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(() => { /* si las reglas aún no lo permiten, no pasa nada grave */ });
+      })
       .catch(err => { authError.textContent = traduceAuthError(err); authError.hidden = false; });
   });
   cloudSignOutBtn.addEventListener('click', () => {
@@ -1410,6 +1532,120 @@
     };
     return map[err.code] || ('No se pudo completar: ' + err.message);
   }
+
+  /* ---------- suscripción (bloqueo manual de acceso) ---------- */
+  function checkSubscription(user){
+    adminNavBtn.hidden = !isAdminUid(user.uid);
+    if (isAdminUid(user.uid)){
+      subOverlay.hidden = true;
+      return;
+    }
+    firebaseDb.collection('subscriptions').doc(user.uid).get().then(doc => {
+      if (!doc.exists){
+        subOverlay.hidden = true;
+        return;
+      }
+      const data = doc.data();
+      const today = new Date().toISOString().slice(0, 10);
+      const expired = data.status === 'vencido' || (data.expiresAt && data.expiresAt < today);
+      if (expired){
+        subOverlayMsg.textContent = 'Tu acceso está pausado' + (data.plan ? ' (' + data.plan + ')' : '') +
+          '. Contacta a quien te dio de alta para reactivarlo.';
+        subOverlay.hidden = false;
+      } else {
+        subOverlay.hidden = true;
+      }
+    }).catch(() => { subOverlay.hidden = true; });
+  }
+  subOverlaySignOut.addEventListener('click', () => { firebaseAuth.signOut(); });
+  copyUidBtn.addEventListener('click', () => {
+    myUidDisplay.select();
+    navigator.clipboard.writeText(myUidDisplay.value).then(() => {
+      copyUidBtn.textContent = '¡Copiado!';
+      setTimeout(() => { copyUidBtn.textContent = 'Copiar'; }, 1500);
+    }).catch(() => {
+      document.execCommand('copy');
+    });
+  });
+
+  /* ---------- panel de administrador ---------- */
+  function renderAdminClients(){
+    if (!firebaseEnabled || !firebaseDb) return;
+    adminClientsList.innerHTML = '<div class="dash-empty">Cargando...</div>';
+    firebaseDb.collection('subscriptions').get().then(snap => {
+      if (snap.empty){
+        adminClientsList.innerHTML = '<div class="dash-empty">Aún no has registrado ningún cliente.</div>';
+        return;
+      }
+      const rows = [];
+      snap.forEach(doc => rows.push({ uid: doc.id, ...doc.data() }));
+      rows.sort((a, b) => (a.plan ? 1 : 0) - (b.plan ? 1 : 0));
+      const pendingCount = rows.filter(c => !c.plan).length;
+      const banner = pendingCount
+        ? `<div class="fiado-overdue-banner">🆕 ${pendingCount} cuenta${pendingCount === 1 ? '' : 's'} nueva${pendingCount === 1 ? '' : 's'} sin plan asignado — revísalas abajo.</div>`
+        : '';
+      adminClientsList.innerHTML = banner + rows.map(c => {
+        const status = c.status || 'activo';
+        const pending = !c.plan;
+        return `<div class="admin-client${pending ? ' admin-client-pending' : ''}" data-uid="${escapeHtml(c.uid)}">
+          <div>
+            <div class="history-date">${pending ? '🆕 ' : ''}${escapeHtml(c.plan || 'Sin plan asignado')}<span class="admin-client-status ${status}">${status.toUpperCase()}</span></div>
+            <div class="history-meta">${c.email ? escapeHtml(c.email) + ' · ' : ''}${escapeHtml(c.uid)}${c.expiresAt ? ' · vence ' + c.expiresAt : ''}${c.notes ? ' · ' + escapeHtml(c.notes) : ''}</div>
+          </div>
+          <div class="admin-client-actions">
+            <button type="button" class="key-small admin-edit-btn" data-uid="${escapeHtml(c.uid)}">✏️ Editar</button>
+            ${status === 'vencido'
+              ? `<button type="button" class="key-small admin-toggle-btn" data-uid="${escapeHtml(c.uid)}" data-newstatus="activo">✅ Activar</button>`
+              : `<button type="button" class="key-small admin-toggle-btn" data-uid="${escapeHtml(c.uid)}" data-newstatus="vencido">🚫 Desactivar</button>`}
+          </div>
+        </div>`;
+      }).join('');
+    }).catch(() => {
+      adminClientsList.innerHTML = '<div class="dash-empty">No se pudo cargar la lista (revisa las reglas de Firestore).</div>';
+    });
+  }
+  adminClientsList.addEventListener('click', e => {
+    const editBtn = e.target.closest('.admin-edit-btn');
+    const toggleBtn = e.target.closest('.admin-toggle-btn');
+    if (editBtn){
+      const uid = editBtn.dataset.uid;
+      firebaseDb.collection('subscriptions').doc(uid).get().then(doc => {
+        if (!doc.exists) return;
+        const d = doc.data();
+        adminUid.value = uid;
+        adminPlan.value = d.plan || '';
+        adminStatus.value = d.status || 'activo';
+        adminExpires.value = d.expiresAt || '';
+        adminNotes.value = d.notes || '';
+        adminUid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    } else if (toggleBtn){
+      const uid = toggleBtn.dataset.uid;
+      firebaseDb.collection('subscriptions').doc(uid).set({ status: toggleBtn.dataset.newstatus }, { merge: true }).then(renderAdminClients);
+    }
+  });
+  adminSaveBtn.addEventListener('click', () => {
+    const uid = adminUid.value.trim();
+    if (!uid){
+      adminFormMsg.textContent = 'Falta pegar el UID del cliente.';
+      return;
+    }
+    const payload = {
+      plan: adminPlan.value.trim(),
+      status: adminStatus.value,
+      expiresAt: adminExpires.value || '',
+      notes: adminNotes.value.trim()
+    };
+    adminFormMsg.textContent = 'Guardando...';
+    firebaseDb.collection('subscriptions').doc(uid).set(payload, { merge: true }).then(() => {
+      adminFormMsg.textContent = 'Guardado ✅';
+      adminUid.value = ''; adminPlan.value = ''; adminExpires.value = ''; adminNotes.value = '';
+      adminStatus.value = 'activo';
+      renderAdminClients();
+    }).catch(err => {
+      adminFormMsg.textContent = 'No se pudo guardar: ' + err.message;
+    });
+  });
 
   function resizeImageToDataUrl(file, maxW, quality, callback){
     const reader = new FileReader();
@@ -1975,7 +2211,8 @@
   let selectedCategory = null;
   const PRESET_CATEGORIES = [
     'Abarrotes', 'Bebidas', 'Snacks', 'Lácteos', 'Panadería',
-    'Verduras y frutas', 'Congelados', 'Limpieza', 'Cuidado personal', 'Otros'
+    'Verduras y frutas', 'Congelados', 'Limpieza', 'Cuidado personal',
+    'Útiles escolares', 'Otros'
   ];
   const CATEGORY_STYLES = {
     'Abarrotes': { icon: '🛒', color: '#8B5E34' },
@@ -1987,6 +2224,7 @@
     'Congelados': { icon: '🧊', color: '#3C7DBF' },
     'Limpieza': { icon: '🧼', color: '#5B7FBF' },
     'Cuidado personal': { icon: '🧴', color: '#B15FA0' },
+    'Útiles escolares': { icon: '✏️', color: '#D4A22A' },
     'Otros': { icon: '🏷️', color: '#7A7986' }
   };
   const CATEGORY_FALLBACK_COLORS = ['#8B5E34','#1C7A57','#C97B2E','#4A90A4','#B4763A','#3E8E41','#3C7DBF','#5B7FBF','#B15FA0','#A0522D','#2E8B8B','#8B4A6B'];
@@ -2908,7 +3146,8 @@
     caja: document.getElementById('pageCaja'),
     dashboard: document.getElementById('pageDashboard'),
     historial: document.getElementById('pageHistorial'),
-    fiados: document.getElementById('pageFiados')
+    fiados: document.getElementById('pageFiados'),
+    admin: document.getElementById('pageAdmin')
   };
   function goToPage(name){
     Object.keys(pages).forEach(key => { pages[key].hidden = key !== name; });
@@ -2918,6 +3157,7 @@
     if (name === 'dashboard') renderDashboard();
     if (name === 'historial') renderHistory();
     if (name === 'fiados') renderFiados();
+    if (name === 'admin') renderAdminClients();
   }
   pageNav.addEventListener('click', e => {
     const btn = e.target.closest('.nav-btn');
