@@ -270,7 +270,7 @@
   .type-tab:hover{ background:#454450; }
   .type-tab.active{ background:var(--felt); border-color:var(--felt-light); color:#fff; }
 
-  form#addForm{ display:flex; flex-direction:column; gap:10px; }
+  form#prodForm, form#quickForm{ display:flex; flex-direction:column; gap:10px; }
   .field{ display:flex; flex-direction:column; gap:4px; }
   .cost-hint{ font-family:'Inter',sans-serif; font-size:11px; color:#8A8992; }
   .more-details-toggle{
@@ -286,6 +286,10 @@
   .field select{
     padding:9px 10px; border-radius:6px; border:1px solid #4A4952; background:var(--graphite-light);
     color:#F2F1ED; font-family:'Inter',sans-serif; font-size:13px;
+  }
+  .products-page-title{
+    font-family:'Space Mono',monospace; font-weight:700; font-size:14px; letter-spacing:0.04em;
+    color:#F2F1ED; margin:0;
   }
   .field select:focus{ outline:none; border-color:var(--felt-light); }
   .field input[type=text]#prodCategoryNew, .field input[type=text]#editProdCategoryNew{ margin-top:6px; }
@@ -626,6 +630,10 @@
   }
   .lock-pin-input:focus{ outline:none; border-color:var(--felt-light); }
   .lock-error{ font-family:'Space Mono',monospace; font-size:12px; color:#FF9B85; }
+  .link-btn{
+    background:none; border:none; color:var(--felt-light); font-family:'Inter',sans-serif;
+    font-size:12px; text-decoration:underline; cursor:pointer; padding:2px;
+  }
   .lock-text-input{
     width:100%; padding:10px 12px; border-radius:8px; border:1px solid #4A4952;
     background:var(--graphite-light); color:#F2F1ED; font-family:'Inter',sans-serif;
@@ -716,6 +724,7 @@
     <div class="lock-error" id="authError" hidden></div>
     <button type="button" id="authSignInBtn" class="key key-add" style="width:100%;">Iniciar sesión</button>
     <button type="button" id="authSignUpBtn" class="key-small" style="width:100%;">Crear cuenta nueva</button>
+    <button type="button" id="authForgotBtn" class="link-btn">¿Olvidaste tu contraseña?</button>
     <span class="brand-hint" style="text-align:center;">Con esta cuenta se sincronizan tu catálogo, ventas y fiados entre todos tus dispositivos.</span>
   </div>
 </div>
@@ -804,6 +813,7 @@
 
   <nav class="page-nav" id="pageNav">
     <button type="button" class="nav-btn active" data-page="caja">🧾 Caja</button>
+    <button type="button" class="nav-btn" data-page="productos">📦 Productos</button>
     <button type="button" class="nav-btn" data-page="dashboard">📊 Dashboard</button>
     <button type="button" class="nav-btn" data-page="historial">🕒 Historial <span id="historyCount">(0)</span></button>
     <button type="button" class="nav-btn" data-page="fiados">📓 Fiados <span id="fiadosCount">(0)</span></button>
@@ -863,6 +873,100 @@
   </div>
   </div>
 
+  <div class="page" id="pageProductos" hidden>
+  <div class="register products-page-form" style="border-radius:14px;">
+    <h3 class="products-page-title">📦 Registrar / editar productos</h3>
+    <form id="prodForm">
+      <div class="type-tabs" id="typeTabs">
+        <button type="button" class="type-tab active" data-type="unit">📦 Unidad</button>
+        <button type="button" class="type-tab" data-type="bulk">⚖️ Granel</button>
+        <button type="button" class="type-tab" data-type="combo">🍹 Combo</button>
+      </div>
+
+      <div class="field">
+        <label for="prodName" id="prodNameLabel">Producto</label>
+        <input id="prodName" type="text" placeholder="Ej. Gaseosa 500ml" required>
+      </div>
+
+      <div class="field" id="comboNotesField" hidden>
+        <label for="comboNotes">Incluye (opcional)</label>
+        <input id="comboNotes" type="text" placeholder="Ej. 3 cervezas + piqueo" maxlength="60">
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="prodPrice" id="priceLabel">Precio unit.</label>
+          <div class="price-with-unit">
+            <input id="prodPrice" type="number" step="0.01" min="0" placeholder="0.00" required>
+            <select id="bulkUnitSelect" hidden>
+              <option value="kg">/kg</option>
+              <option value="g">/g</option>
+              <option value="lb">/lb</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="display:none;">
+          <label for="prodQty" id="qtyLabel">Cant.</label>
+          <input id="prodQty" type="number" step="1" min="0" value="1">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="prodCost">Costo (opcional)</label>
+        <input id="prodCost" type="number" step="0.01" min="0" placeholder="0.00">
+        <span class="cost-hint">Para ver tu ganancia en el Dashboard</span>
+      </div>
+      <div class="field">
+        <label for="prodBarcode">Código de barras (opcional)</label>
+        <div class="logo-row">
+          <input id="prodBarcode" type="text" placeholder="Escanéalo con 📷 o escríbelo" style="flex:1;">
+        </div>
+        <div class="backup-row" style="margin-top:6px;">
+          <button type="button" id="prodGenBarcodeBtn" class="key-small">🎲 Generar código</button>
+          <button type="button" id="prodPrintBarcodeBtn" class="key-small">🖨️ Imprimir etiqueta</button>
+        </div>
+        <span class="brand-hint">Para productos sin código de fábrica (huevo, fruta suelta, etc.)</span>
+      </div>
+      <div class="field">
+        <label for="prodImage">Foto (opcional)</label>
+        <div class="logo-row">
+          <img id="prodImagePreview" class="product-img-preview" hidden alt="Foto">
+          <input type="file" id="prodImage" accept="image/*">
+          <button type="button" id="prodImageRemoveBtn" class="key-small" hidden>Quitar</button>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="prodCategorySelect">Categoría</label>
+          <select id="prodCategorySelect">
+            <option value="">Sin categoría</option>
+            <option value="__new__">➕ Nueva categoría...</option>
+          </select>
+          <input id="prodCategoryNew" type="text" placeholder="Nombre de la categoría nueva" hidden>
+        </div>
+        <div class="field">
+          <label for="prodStock">Stock</label>
+          <input id="prodStock" type="number" step="1" min="0" placeholder="—">
+        </div>
+      </div>
+
+      <button type="submit" class="key key-add">💾 Guardar producto</button>
+      <div class="brand-hint" id="prodFormMsg"></div>
+    </form>
+  </div>
+
+  <div class="history-panel" style="margin-top:16px;">
+    <div class="history-panel-head">
+      <h3>Tu catálogo</h3>
+    </div>
+    <div class="catalog-search-row">
+      <input type="text" id="productPageSearch" class="paper-search" style="margin-bottom:0; flex:1;" placeholder="🔎 Buscar producto...">
+    </div>
+    <div class="category-chips" id="productPageCategoryChips" style="margin-top:10px;"></div>
+    <div class="history-list" id="productPageList" style="margin-top:10px;"></div>
+  </div>
+  </div>
+
   <div class="page" id="pageCaja">
   <div class="layout">
     <section class="register">
@@ -882,88 +986,31 @@
         <div class="catalog-chips" id="catalogChips"></div>
       </div>
 
-      <form id="addForm">
-        <div class="type-tabs" id="typeTabs">
-          <button type="button" class="type-tab active" data-type="unit">📦 Unidad</button>
-          <button type="button" class="type-tab" data-type="bulk">⚖️ Granel</button>
-          <button type="button" class="type-tab" data-type="combo">🍹 Combo</button>
-        </div>
-
+      <form id="quickForm">
         <div class="field">
-          <label for="prodName" id="prodNameLabel">Producto</label>
-          <input id="prodName" type="text" placeholder="Ej. Gaseosa 500ml" required>
+          <label for="quickName">🆕 Item rápido (no está en tu catálogo)</label>
+          <input id="quickName" type="text" placeholder="Ej. Producto suelto" required>
         </div>
-
-        <div class="field" id="comboNotesField" hidden>
-          <label for="comboNotes">Incluye (opcional)</label>
-          <input id="comboNotes" type="text" placeholder="Ej. 3 cervezas + piqueo" maxlength="60">
-        </div>
-
+        <label class="save-catalog-row">
+          <input type="checkbox" id="quickIsBulk">
+          ⚖️ Se vende por peso (kg)
+        </label>
         <div class="row2">
           <div class="field">
-            <label for="prodPrice" id="priceLabel">Precio unit.</label>
-            <div class="price-with-unit">
-              <input id="prodPrice" type="number" step="0.01" min="0" placeholder="0.00" required>
-              <select id="bulkUnitSelect" hidden>
-                <option value="kg">/kg</option>
-                <option value="g">/g</option>
-                <option value="lb">/lb</option>
-              </select>
-            </div>
+            <label for="quickPrice" id="quickPriceLabel">Precio</label>
+            <input id="quickPrice" type="number" step="0.01" min="0" placeholder="0.00" required>
           </div>
           <div class="field">
-            <label for="prodQty" id="qtyLabel">Cant.</label>
-            <input id="prodQty" type="number" step="1" min="0" value="1">
+            <label for="quickQty" id="quickQtyLabel">Cant.</label>
+            <input id="quickQty" type="number" step="1" min="0" value="1">
           </div>
         </div>
-
-        <button type="button" id="moreDetailsToggle" class="more-details-toggle">➕ Más detalles (costo, foto, categoría, stock...)</button>
-        <div class="more-details-panel" id="moreDetailsPanel" hidden>
-          <div class="field">
-            <label for="prodCost">Costo (opcional)</label>
-            <input id="prodCost" type="number" step="0.01" min="0" placeholder="0.00">
-            <span class="cost-hint">Para ver tu ganancia en el Dashboard</span>
-          </div>
-          <div class="field">
-            <label for="prodBarcode">Código de barras (opcional)</label>
-            <div class="logo-row">
-              <input id="prodBarcode" type="text" placeholder="Escanéalo con 📷 o escríbelo" style="flex:1;">
-            </div>
-            <div class="backup-row" style="margin-top:6px;">
-              <button type="button" id="prodGenBarcodeBtn" class="key-small">🎲 Generar código</button>
-              <button type="button" id="prodPrintBarcodeBtn" class="key-small">🖨️ Imprimir etiqueta</button>
-            </div>
-            <span class="brand-hint">Para productos sin código de fábrica (huevo, fruta suelta, etc.)</span>
-          </div>
-          <div class="field">
-            <label for="prodImage">Foto (opcional)</label>
-            <div class="logo-row">
-              <img id="prodImagePreview" class="product-img-preview" hidden alt="Foto">
-              <input type="file" id="prodImage" accept="image/*">
-              <button type="button" id="prodImageRemoveBtn" class="key-small" hidden>Quitar</button>
-            </div>
-          </div>
-          <div class="row2">
-            <div class="field">
-              <label for="prodCategorySelect">Categoría</label>
-              <select id="prodCategorySelect">
-                <option value="">Sin categoría</option>
-                <option value="__new__">➕ Nueva categoría...</option>
-              </select>
-              <input id="prodCategoryNew" type="text" placeholder="Nombre de la categoría nueva" hidden>
-            </div>
-            <div class="field">
-              <label for="prodStock">Stock</label>
-              <input id="prodStock" type="number" step="1" min="0" placeholder="—">
-            </div>
-          </div>
-        </div>
-
         <label class="save-catalog-row">
-          <input type="checkbox" id="saveToCatalog" checked>
+          <input type="checkbox" id="quickSaveToCatalog">
           Guardar en catálogo para reutilizar
         </label>
         <button type="submit" class="key key-add">+ AGREGAR</button>
+        <span class="brand-hint">¿Vas a registrar bien un producto (con foto, categoría, stock...)? Ve a la pestaña 📦 Productos.</span>
       </form>
 
       <div class="settings">
@@ -1274,9 +1321,8 @@
   const prodImageRemoveBtn = document.getElementById('prodImageRemoveBtn');
   const prodCategorySelect = document.getElementById('prodCategorySelect');
   const prodCategoryNew = document.getElementById('prodCategoryNew');
-  const moreDetailsToggle = document.getElementById('moreDetailsToggle');
-  const moreDetailsPanel = document.getElementById('moreDetailsPanel');
   const prodStock = document.getElementById('prodStock');
+  const prodFormMsg = document.getElementById('prodFormMsg');
   const categoryChips = document.getElementById('categoryChips');
   const qtyInput = document.getElementById('prodQty');
   const priceLabel = document.getElementById('priceLabel');
@@ -1302,8 +1348,17 @@
   const dashContent = document.getElementById('dashContent');
   const customerPhone = document.getElementById('customerPhone');
   const shareWhatsapp = document.getElementById('shareWhatsapp');
-  const saveToCatalogChk = document.getElementById('saveToCatalog');
+  const quickName = document.getElementById('quickName');
+  const quickIsBulk = document.getElementById('quickIsBulk');
+  const quickPriceLabel = document.getElementById('quickPriceLabel');
+  const quickQtyLabel = document.getElementById('quickQtyLabel');
+  const quickPrice = document.getElementById('quickPrice');
+  const quickQty = document.getElementById('quickQty');
+  const quickSaveToCatalog = document.getElementById('quickSaveToCatalog');
   const catalogChips = document.getElementById('catalogChips');
+  const productPageList = document.getElementById('productPageList');
+  const productPageCategoryChips = document.getElementById('productPageCategoryChips');
+  const productPageSearch = document.getElementById('productPageSearch');
   const catalogEmpty = document.getElementById('catalogEmpty');
   const catalogSearch = document.getElementById('catalogSearch');
   const brandToggle = document.getElementById('brandToggle');
@@ -1644,6 +1699,26 @@
       })
       .catch(err => { authError.textContent = traduceAuthError(err); authError.hidden = false; });
   });
+  document.getElementById('authForgotBtn').addEventListener('click', () => {
+    authError.hidden = true;
+    const email = authEmail.value.trim();
+    if (!email){
+      authError.style.color = '';
+      authError.textContent = 'Escribe tu correo arriba primero, y dale de nuevo a este botón.';
+      authError.hidden = false;
+      authEmail.focus();
+      return;
+    }
+    firebaseAuth.sendPasswordResetEmail(email).then(() => {
+      authError.style.color = 'var(--felt-light)';
+      authError.textContent = 'Listo, te mandamos un correo a ' + email + ' con instrucciones para poner una contraseña nueva.';
+      authError.hidden = false;
+    }).catch(err => {
+      authError.style.color = '';
+      authError.textContent = traduceAuthError(err);
+      authError.hidden = false;
+    });
+  });
   cloudSignOutBtn.addEventListener('click', () => {
     if (!confirm('¿Cerrar sesión de la nube en este dispositivo? Tus datos locales se quedan aquí, pero dejan de sincronizarse hasta que vuelvas a entrar.')) return;
     firebaseAuth.signOut();
@@ -1886,13 +1961,6 @@
   }
 
   /* ---------- panel "más detalles" plegable ---------- */
-  moreDetailsToggle.addEventListener('click', () => {
-    const willShow = moreDetailsPanel.hidden;
-    moreDetailsPanel.hidden = !willShow;
-    moreDetailsToggle.textContent = willShow
-      ? '➖ Ocultar detalles'
-      : '➕ Más detalles (costo, foto, categoría, stock...)';
-  });
   prodCategorySelect.addEventListener('change', () => {
     prodCategoryNew.hidden = prodCategorySelect.value !== '__new__';
     if (!prodCategoryNew.hidden) prodCategoryNew.focus();
@@ -2465,6 +2533,7 @@
     populateCategorySelect(editProdCategorySelect);
     if (!cats.length){
       categoryChips.innerHTML = '';
+      if (productPageCategoryChips) productPageCategoryChips.innerHTML = '';
       return;
     }
     if (selectedCategory && !cats.includes(selectedCategory)) selectedCategory = null;
@@ -2478,14 +2547,26 @@
         return `<button type="button" class="category-chip${active ? ' active' : ''}" data-cat="${escapeHtml(c)}" ${style}>${st.icon} ${escapeHtml(c)}</button>`;
       }));
     categoryChips.innerHTML = chips.join('');
+    if (productPageCategoryChips) productPageCategoryChips.innerHTML = chips.join('');
   }
-  categoryChips.addEventListener('click', e => {
+  function handleCategoryChipClick(e){
     const btn = e.target.closest('.category-chip');
     if (!btn) return;
     selectedCategory = btn.dataset.cat || null;
     renderCategoryChips();
     renderCatalog();
-  });
+  }
+  categoryChips.addEventListener('click', handleCategoryChipClick);
+  if (productPageCategoryChips) productPageCategoryChips.addEventListener('click', handleCategoryChipClick);
+  if (productPageSearch){
+    productPageSearch.addEventListener('input', () => {
+      catalogSearch.value = productPageSearch.value;
+      renderCatalog();
+    });
+    catalogSearch.addEventListener('input', () => {
+      productPageSearch.value = catalogSearch.value;
+    });
+  }
 
   function renderCatalog(){
     renderCategoryChips();
@@ -2494,31 +2575,33 @@
     let filtered = q ? catalog.filter(p => p.name.toLowerCase().includes(q)) : catalog;
     if (selectedCategory) filtered = filtered.filter(p => p.category === selectedCategory);
 
+    let html;
     if (catalog.length && !filtered.length){
-      catalogChips.innerHTML = `<div class="catalog-empty" style="display:block;">Sin resultados${q ? ' para "' + escapeHtml(q) + '"' : ''}</div>`;
-      return;
+      html = `<div class="catalog-empty" style="display:block;">Sin resultados${q ? ' para "' + escapeHtml(q) + '"' : ''}</div>`;
+    } else {
+      html = filtered.map(p => {
+        const type = p.type || 'unit';
+        const priceText = type === 'bulk' ? fmt(p.price) + '/' + (p.unit || 'kg') : fmt(p.price);
+        let stockBadge = '';
+        if (typeof p.stock === 'number'){
+          const cls = p.stock <= 0 ? 'zero' : p.stock <= 3 ? 'low' : '';
+          stockBadge = `<span class="chip-stock${cls ? ' ' + cls : ''}">${p.stock <= 0 ? 'sin stock' : p.stock + ' uds'}</span>`;
+        }
+        const iconHtml = p.image ? `<img class="chip-thumb" src="${p.image}" alt="">` : typeIcon(type);
+        return `
+        <div class="catalog-chip" data-id="${p.id}">
+          <button type="button" class="chip-add" data-id="${p.id}">
+            <span class="chip-name">${iconHtml}${escapeHtml(p.name)}${stockBadge}</span>
+            <span class="chip-price">${priceText}</span>
+          </button>
+          <button type="button" class="chip-edit" data-id="${p.id}" title="Editar producto">✏️</button>
+          <button type="button" class="chip-del" data-id="${p.id}" title="Quitar del catálogo">✕</button>
+        </div>
+      `;
+      }).join('');
     }
-
-    catalogChips.innerHTML = filtered.map(p => {
-      const type = p.type || 'unit';
-      const priceText = type === 'bulk' ? fmt(p.price) + '/' + (p.unit || 'kg') : fmt(p.price);
-      let stockBadge = '';
-      if (typeof p.stock === 'number'){
-        const cls = p.stock <= 0 ? 'zero' : p.stock <= 3 ? 'low' : '';
-        stockBadge = `<span class="chip-stock${cls ? ' ' + cls : ''}">${p.stock <= 0 ? 'sin stock' : p.stock + ' uds'}</span>`;
-      }
-      const iconHtml = p.image ? `<img class="chip-thumb" src="${p.image}" alt="">` : typeIcon(type);
-      return `
-      <div class="catalog-chip" data-id="${p.id}">
-        <button type="button" class="chip-add" data-id="${p.id}">
-          <span class="chip-name">${iconHtml}${escapeHtml(p.name)}${stockBadge}</span>
-          <span class="chip-price">${priceText}</span>
-        </button>
-        <button type="button" class="chip-edit" data-id="${p.id}" title="Editar producto">✏️</button>
-        <button type="button" class="chip-del" data-id="${p.id}" title="Quitar del catálogo">✕</button>
-      </div>
-    `;
-    }).join('');
+    catalogChips.innerHTML = html;
+    if (productPageList) productPageList.innerHTML = html;
   }
 
   function addFromCatalog(product){
@@ -2924,40 +3007,31 @@
   }
 
   /* ---------- events ---------- */
-  document.getElementById('addForm').addEventListener('submit', e => {
+  document.getElementById('prodForm').addEventListener('submit', e => {
     e.preventDefault();
     const name = nameInput.value.trim();
     const price = parseFloat(priceInput.value);
-    let qty = parseFloat(qtyInput.value);
     if (!name || isNaN(price) || price < 0) return;
-    if (currentType === 'bulk'){
-      if (isNaN(qty) || qty <= 0) return;
-    } else if (isNaN(qty) || qty <= 0){
-      qty = 1;
-    }
 
-    const item = { id: nextId++, name, price, qty, type: currentType };
-    if (currentType === 'bulk') item.unit = bulkUnitSelect.value;
+    const product = { name, price, type: currentType };
+    if (currentType === 'bulk') product.unit = bulkUnitSelect.value;
     if (currentType === 'combo'){
       const notes = comboNotes.value.trim();
-      if (notes) item.notes = notes;
+      if (notes) product.notes = notes;
     }
     const cost = parseFloat(costInput.value);
-    if (!isNaN(cost) && cost >= 0) item.cost = cost;
+    if (!isNaN(cost) && cost >= 0) product.cost = cost;
     const barcode = barcodeInput.value.trim();
-    if (barcode) item.barcode = barcode;
+    if (barcode) product.barcode = barcode;
     const category = prodCategorySelect.value === '__new__' ? prodCategoryNew.value.trim() : prodCategorySelect.value;
-    if (category) item.category = category;
+    if (category) product.category = category;
     if (prodStock.value !== ''){
       const s = parseInt(prodStock.value, 10);
-      if (!isNaN(s) && s >= 0) item.stock = s;
+      if (!isNaN(s) && s >= 0) product.stock = s;
     }
-    if (pendingProdImage) item.image = pendingProdImage;
-    items.push(item);
+    if (pendingProdImage) product.image = pendingProdImage;
 
-    if (saveToCatalogChk.checked){
-      upsertCatalog(item);
-    }
+    upsertCatalog(product);
 
     nameInput.value = '';
     priceInput.value = '';
@@ -2974,6 +3048,44 @@
     qtyInput.value = currentType === 'bulk' ? '' : '1';
     comboNotes.value = '';
     nameInput.focus();
+    prodFormMsg.textContent = 'Producto guardado ✅';
+    setTimeout(() => { prodFormMsg.textContent = ''; }, 2500);
+  });
+
+  quickIsBulk.addEventListener('change', () => {
+    if (quickIsBulk.checked){
+      quickPriceLabel.textContent = 'Precio por kg';
+      quickQtyLabel.textContent = 'Peso (kg)';
+      quickQty.step = '0.001'; quickQty.placeholder = '0.000'; quickQty.value = '';
+    } else {
+      quickPriceLabel.textContent = 'Precio';
+      quickQtyLabel.textContent = 'Cant.';
+      quickQty.step = '1'; quickQty.placeholder = '1'; quickQty.value = '1';
+    }
+  });
+  document.getElementById('quickForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = quickName.value.trim();
+    const price = parseFloat(quickPrice.value);
+    let qty = parseFloat(quickQty.value);
+    if (!name || isNaN(price) || price < 0) return;
+    const isBulk = quickIsBulk.checked;
+    if (isBulk){
+      if (isNaN(qty) || qty <= 0) return;
+    } else if (isNaN(qty) || qty <= 0){
+      qty = 1;
+    }
+
+    const item = { id: nextId++, name, price, qty, type: isBulk ? 'bulk' : 'unit' };
+    if (isBulk) item.unit = 'kg';
+    items.push(item);
+    if (quickSaveToCatalog.checked) upsertCatalog(item);
+
+    quickName.value = '';
+    quickPrice.value = '';
+    quickQty.value = isBulk ? '' : '1';
+    quickSaveToCatalog.checked = false;
+    quickName.focus();
     updateLedPreview();
     render();
     saveCurrentTicket();
@@ -3015,7 +3127,7 @@
     }
   });
 
-  catalogChips.addEventListener('click', e => {
+  function handleCatalogChipClick(e){
     const addBtn = e.target.closest('.chip-add');
     const editBtn = e.target.closest('.chip-edit');
     const delBtn = e.target.closest('.chip-del');
@@ -3033,7 +3145,9 @@
       saveCatalog();
       renderCatalog();
     }
-  });
+  }
+  catalogChips.addEventListener('click', handleCatalogChipClick);
+  if (productPageList) productPageList.addEventListener('click', handleCatalogChipClick);
 
   /* ---------- editar producto de catálogo ---------- */
   function openEditProduct(product){
@@ -3451,6 +3565,7 @@
   const pageNav = document.getElementById('pageNav');
   const pages = {
     caja: document.getElementById('pageCaja'),
+    productos: document.getElementById('pageProductos'),
     dashboard: document.getElementById('pageDashboard'),
     historial: document.getElementById('pageHistorial'),
     fiados: document.getElementById('pageFiados'),
