@@ -255,6 +255,11 @@
     font-size:11px; padding:0 8px; cursor:pointer;
   }
   .chip-edit:hover{ color:#fff; background:var(--felt); }
+  .chip-restock{
+    background:none; border:none; border-left:1px solid #4A4952; color:#9C9BA3;
+    font-size:11px; padding:0 8px; cursor:pointer;
+  }
+  .chip-restock:hover{ color:#fff; background:var(--yape); }
   .chip-del{
     background:none; border:none; border-left:1px solid #4A4952; color:#9C9BA3;
     font-size:11px; padding:0 8px; cursor:pointer;
@@ -1483,8 +1488,20 @@
   function safeGet(key){
     try{ return localStorage.getItem(key); } catch(e){ return null; }
   }
+  let storageFullWarned = false;
   function safeSet(key, value){
-    try{ localStorage.setItem(key, value); } catch(e){ /* ignore, e.g. quota exceeded */ }
+    try{
+      localStorage.setItem(key, value);
+    } catch(e){
+      if (storageFullWarned) return;
+      storageFullWarned = true;
+      const cloudOk = firebaseEnabled && currentUser;
+      if (cloudOk){
+        alert('⚠ El almacenamiento de este navegador se llenó, así que este último cambio no se guardó localmente. Como tienes la sincronización en la nube activa, tus datos siguen a salvo ahí. Para liberar espacio en este dispositivo, entra a "📦 Productos" y quita fotos de productos que no las necesiten (son lo que más pesa).');
+      } else {
+        alert('⚠ El almacenamiento de este navegador se llenó — este último cambio NO se guardó. No tienes la sincronización en la nube activa, así que te recomiendo: 1) ve a "🏪 Mi bodega" y descarga un respaldo (⬇️) ahora mismo, 2) luego entra a "📦 Productos" y quita fotos de productos para liberar espacio.');
+      }
+    }
   }
   function loadAll(){
     storageAvailable = testStorage();
@@ -2588,12 +2605,16 @@
           stockBadge = `<span class="chip-stock${cls ? ' ' + cls : ''}">${p.stock <= 0 ? 'sin stock' : p.stock + ' uds'}</span>`;
         }
         const iconHtml = p.image ? `<img class="chip-thumb" src="${p.image}" alt="">` : typeIcon(type);
+        const restockBtn = typeof p.stock === 'number'
+          ? `<button type="button" class="chip-restock" data-id="${p.id}" title="Reponer stock">🔄</button>`
+          : '';
         return `
         <div class="catalog-chip" data-id="${p.id}">
           <button type="button" class="chip-add" data-id="${p.id}">
             <span class="chip-name">${iconHtml}${escapeHtml(p.name)}${stockBadge}</span>
             <span class="chip-price">${priceText}</span>
           </button>
+          ${restockBtn}
           <button type="button" class="chip-edit" data-id="${p.id}" title="Editar producto">✏️</button>
           <button type="button" class="chip-del" data-id="${p.id}" title="Quitar del catálogo">✕</button>
         </div>
@@ -3131,6 +3152,7 @@
     const addBtn = e.target.closest('.chip-add');
     const editBtn = e.target.closest('.chip-edit');
     const delBtn = e.target.closest('.chip-del');
+    const restockBtn = e.target.closest('.chip-restock');
     if (addBtn){
       const id = parseInt(addBtn.dataset.id, 10);
       const product = catalog.find(p => p.id === id);
@@ -3144,7 +3166,23 @@
       catalog = catalog.filter(p => p.id !== id);
       saveCatalog();
       renderCatalog();
+    } else if (restockBtn){
+      const id = parseInt(restockBtn.dataset.id, 10);
+      const product = catalog.find(p => p.id === id);
+      if (product) restockProduct(product);
     }
+  }
+  function restockProduct(product){
+    openModal({
+      title: `🔄 Reponer stock — ${product.name}`,
+      label: `¿Cuánto entró? (tiene ${product.stock} ahora)`,
+      step: '1',
+      placeholder: '0'
+    }, (amount) => {
+      product.stock = Math.round((product.stock + amount) * 1000) / 1000;
+      saveCatalog();
+      renderCatalog();
+    });
   }
   catalogChips.addEventListener('click', handleCatalogChipClick);
   if (productPageList) productPageList.addEventListener('click', handleCatalogChipClick);
