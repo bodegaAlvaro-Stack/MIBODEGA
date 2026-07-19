@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registro de Ventas</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#145C43">
+<meta name="theme-color" content="#C1622C">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,18 +14,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#1B1B1F;
-    --graphite:#302F35;
-    --graphite-light:#3D3C43;
-    --felt:#145C43;
-    --felt-light:#1C7A57;
-    --maroon:#7A2E2E;
-    --maroon-light:#953B3B;
-    --led:#FF4433;
-    --paper:#F7F4EC;
-    --paper-line:#DAD4C2;
-    --paper-ink:#2A2A28;
-    --paper-fade:#9A9384;
+    --ink:#241811;
+    --graphite:#3D2B1E;
+    --graphite-light:#4A3524;
+    --felt:#C1622C;
+    --felt-light:#DE7C3E;
+    --maroon:#8B3A24;
+    --maroon-light:#A34A2E;
+    --led:#FF6B35;
+    --paper:#FBF1E1;
+    --paper-line:#E8D4B0;
+    --paper-ink:#3A2A18;
+    --paper-fade:#B09B7E;
     --yape:#8A05BE;
     --yape-light:#A82BE0;
     --fiado:#8B5E00;
@@ -36,7 +36,7 @@
   body{
     margin:0;
     font-family:'Inter',system-ui,sans-serif;
-    background:#E9E5D8;
+    background:#F2E4CC;
     color:var(--paper-ink);
     display:flex;
     justify-content:center;
@@ -44,7 +44,7 @@
   }
   .pos{
     width:100%; max-width:1440px;
-    background:#FFFDF9;
+    background:#FFFAF2;
     border-radius:20px;
     padding:22px 22px 30px;
     box-shadow:0 24px 60px rgba(0,0,0,0.12);
@@ -63,7 +63,7 @@
   }
   .header-actions{ display:flex; gap:8px; flex-wrap:wrap; }
   .history-btn{
-    background:var(--graphite); color:#F2F1ED; border:1px solid #4A4952;
+    background:var(--graphite); color:#F5EBDD; border:1px solid #5C4530;
     border-radius:20px; padding:6px 14px; font-family:'Space Mono',monospace;
     font-size:11px; letter-spacing:0.08em; cursor:pointer; max-width:220px;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -85,7 +85,7 @@
     font-size:12px; letter-spacing:0.06em; cursor:pointer;
   }
   .nav-btn:hover{ border-color:var(--felt-light); }
-  .nav-btn.active{ background:var(--graphite); color:#F2F1ED; border-color:var(--graphite); }
+  .nav-btn.active{ background:var(--graphite); color:#F5EBDD; border-color:var(--graphite); }
   .page{ }
 
   /* ---------- DASHBOARD ---------- */
@@ -186,7 +186,7 @@
   .led-row{ display:flex; gap:10px; }
   .led-box{ flex:1; min-width:0; }
   .led-display{
-    background:#0D0D0F; border-radius:8px; padding:16px 14px;
+    background:#140D08; border-radius:8px; padding:16px 14px;
     box-shadow:inset 0 2px 6px rgba(0,0,0,0.6);
     font-family:'Space Mono',monospace; font-weight:700; font-size:28px; letter-spacing:0.04em;
     text-align:right; color:var(--led);
@@ -198,7 +198,7 @@
   }
   .led-label{
     font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.2em;
-    color:#5A5A62; text-transform:uppercase; margin:-10px 0 0 2px;
+    color:#8A7259; text-transform:uppercase; margin:-10px 0 0 2px;
   }
   @media (max-width:480px){
     .led-row{ flex-direction:column; }
@@ -207,11 +207,11 @@
 
   .catalog-section{ display:flex; flex-direction:column; gap:8px; }
   .catalog-label{
-    font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#9C9BA3; font-weight:600;
+    font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#B39A7C; font-weight:600;
   }
   .catalog-search{
-    background:var(--graphite-light); border:1px solid #4A4952; border-radius:7px;
-    padding:8px 10px; color:#F2F1ED; font-family:'Inter',sans-serif; font-size:13px; outline:none;
+    background:var(--graphite-light); border:1px solid #5C4530; border-radius:7px;
+    padding:8px 10px; color:#F5EBDD; font-family:'Inter',sans-serif; font-size:13px; outline:none;
   }
   .catalog-search:focus{ border-color:var(--felt-light); }
   .catalog-search::placeholder{ color:#7C7B84; }
@@ -224,7 +224,7 @@
   .scan-btn:hover{ background:var(--felt-light); }
   .category-chips{ display:flex; flex-wrap:wrap; gap:6px; }
   .category-chip{
-    background:var(--graphite-light); color:#D7D6DC; border:1px solid #4A4952;
+    background:var(--graphite-light); color:#E8D9C4; border:1px solid #5C4530;
     border-radius:14px; padding:4px 11px; font-family:'Space Mono',monospace;
     font-size:10.5px; letter-spacing:0.04em; cursor:pointer;
   }
@@ -232,7 +232,7 @@
   .category-chip.active{ background:var(--felt); color:#fff; border-color:var(--felt); }
   .chip-stock{
     font-family:'Space Mono',monospace; font-size:9.5px; padding:1px 6px; border-radius:8px;
-    margin-left:6px; background:#3B3A42; color:#B7B6BE; display:inline-block;
+    margin-left:6px; background:#4A3524; color:#D8C7AE; display:inline-block;
   }
   .chip-stock.low{ background:#5C2A1F; color:#FFC9B8; }
   .chip-stock.zero{ background:var(--maroon); color:#fff; }
@@ -253,34 +253,34 @@
   .catalog-chips{ display:flex; flex-wrap:wrap; gap:6px; }
   .catalog-chip{
     display:flex; align-items:stretch; background:var(--graphite-light);
-    border:1px solid #4A4952; border-radius:7px; overflow:hidden;
+    border:1px solid #5C4530; border-radius:7px; overflow:hidden;
   }
   .chip-add{
-    background:none; border:none; color:#F2F1ED; padding:7px 10px;
+    background:none; border:none; color:#F5EBDD; padding:7px 10px;
     display:flex; flex-direction:column; align-items:flex-start; cursor:pointer; gap:2px;
   }
   .chip-add:hover{ background:#454450; }
   .chip-name{ font-family:'Inter',sans-serif; font-size:12px; font-weight:600; }
   .chip-price{ font-family:'Space Mono',monospace; font-size:11px; color:#9FD9BE; }
   .chip-edit{
-    background:none; border:none; border-left:1px solid #4A4952; color:#9C9BA3;
+    background:none; border:none; border-left:1px solid #5C4530; color:#B39A7C;
     font-size:11px; padding:0 8px; cursor:pointer;
   }
   .chip-edit:hover{ color:#fff; background:var(--felt); }
   .chip-restock{
-    background:none; border:none; border-left:1px solid #4A4952; color:#9C9BA3;
+    background:none; border:none; border-left:1px solid #5C4530; color:#B39A7C;
     font-size:11px; padding:0 8px; cursor:pointer;
   }
   .chip-restock:hover{ color:#fff; background:var(--yape); }
   .chip-del{
-    background:none; border:none; border-left:1px solid #4A4952; color:#9C9BA3;
+    background:none; border:none; border-left:1px solid #5C4530; color:#B39A7C;
     font-size:11px; padding:0 8px; cursor:pointer;
   }
   .chip-del:hover{ color:#fff; background:var(--maroon); }
 
   .type-tabs{ display:flex; gap:6px; }
   .type-tab{
-    flex:1; background:var(--graphite-light); border:1px solid #4A4952; color:#B8B7BE;
+    flex:1; background:var(--graphite-light); border:1px solid #5C4530; color:#D8C7AE;
     border-radius:7px; padding:8px 6px; font-family:'Space Mono',monospace; font-size:10.5px;
     letter-spacing:0.04em; cursor:pointer; text-align:center;
   }
@@ -289,34 +289,34 @@
 
   form#prodForm, form#quickForm{ display:flex; flex-direction:column; gap:10px; }
   .field{ display:flex; flex-direction:column; gap:4px; }
-  .cost-hint{ font-family:'Inter',sans-serif; font-size:11px; color:#8A8992; }
+  .cost-hint{ font-family:'Inter',sans-serif; font-size:11px; color:#A6906F; }
   .more-details-toggle{
-    background:none; border:1px dashed #4A4952; color:#B7B6BE; border-radius:8px;
+    background:none; border:1px dashed #5C4530; color:#D8C7AE; border-radius:8px;
     padding:8px 10px; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:0.03em;
     cursor:pointer; text-align:left;
   }
-  .more-details-toggle:hover{ border-color:var(--felt-light); color:#F2F1ED; }
+  .more-details-toggle:hover{ border-color:var(--felt-light); color:#F5EBDD; }
   .more-details-panel{
     display:flex; flex-direction:column; gap:14px; padding:12px; margin-top:-4px;
-    background:#28272C; border-radius:10px; border:1px solid #3A393F;
+    background:#332318; border-radius:10px; border:1px solid #4A3524;
   }
   .field select{
-    padding:9px 10px; border-radius:6px; border:1px solid #4A4952; background:var(--graphite-light);
-    color:#F2F1ED; font-family:'Inter',sans-serif; font-size:13px;
+    padding:9px 10px; border-radius:6px; border:1px solid #5C4530; background:var(--graphite-light);
+    color:#F5EBDD; font-family:'Inter',sans-serif; font-size:13px;
   }
   .products-page-title{
     font-family:'Space Mono',monospace; font-weight:700; font-size:14px; letter-spacing:0.04em;
-    color:#F2F1ED; margin:0;
+    color:#F5EBDD; margin:0;
   }
   .field select:focus{ outline:none; border-color:var(--felt-light); }
   .field input[type=text]#prodCategoryNew, .field input[type=text]#editProdCategoryNew{ margin-top:6px; }
   .field label{
     font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
-    color:#9C9BA3; font-weight:600;
+    color:#B39A7C; font-weight:600;
   }
   .field input, .field select{
-    background:var(--graphite-light); border:1px solid #4A4952; border-radius:6px;
-    padding:9px 10px; color:#F2F1ED; font-family:'Inter',sans-serif; font-size:14px; outline:none;
+    background:var(--graphite-light); border:1px solid #5C4530; border-radius:6px;
+    padding:9px 10px; color:#F5EBDD; font-family:'Inter',sans-serif; font-size:14px; outline:none;
   }
   .field input:focus, .field select:focus{ border-color:var(--felt-light); }
   .row2{ display:grid; grid-template-columns:1fr 78px; gap:10px; min-width:0; }
@@ -325,7 +325,7 @@
   .price-with-unit input{ flex:1; min-width:0; }
   .price-with-unit select{ width:64px; padding:9px 4px; font-family:'Space Mono',monospace; font-size:11px; flex-shrink:0; }
   .save-catalog-row{
-    display:flex; align-items:center; gap:6px; font-size:11px; color:#B8B7BE; font-family:'Inter',sans-serif;
+    display:flex; align-items:center; gap:6px; font-size:11px; color:#D8C7AE; font-family:'Inter',sans-serif;
   }
   .save-catalog-row input[type=checkbox]{ accent-color:var(--felt); width:14px; height:14px; }
   .key{
@@ -619,9 +619,9 @@
   }
   .product-img-preview{
     width:40px; height:40px; object-fit:cover; border-radius:6px;
-    border:1px solid #4A4952; background:#fff;
+    border:1px solid #5C4530; background:#fff;
   }
-  .field input[type=file]{ font-family:'Inter',sans-serif; font-size:12px; color:#D7D6DC; }
+  .field input[type=file]{ font-family:'Inter',sans-serif; font-size:12px; color:#E8D9C4; }
   .chip-thumb{
     width:20px; height:20px; object-fit:cover; border-radius:4px;
     vertical-align:middle; margin-right:5px;
@@ -638,11 +638,11 @@
   }
   .lock-icon{ font-size:40px; }
   .lock-title{
-    font-family:'Space Mono',monospace; font-size:14px; letter-spacing:0.06em; color:#F2F1ED;
+    font-family:'Space Mono',monospace; font-size:14px; letter-spacing:0.06em; color:#F5EBDD;
   }
   .lock-pin-input{
     width:160px; text-align:center; font-size:26px; letter-spacing:0.5em; padding:10px 0 10px 0.5em;
-    border-radius:8px; border:1px solid #4A4952; background:var(--graphite-light); color:#F2F1ED;
+    border-radius:8px; border:1px solid #5C4530; background:var(--graphite-light); color:#F5EBDD;
     font-family:'Space Mono',monospace;
   }
   .lock-pin-input:focus{ outline:none; border-color:var(--felt-light); }
@@ -652,12 +652,12 @@
     font-size:12px; text-decoration:underline; cursor:pointer; padding:2px;
   }
   .lock-text-input{
-    width:100%; padding:10px 12px; border-radius:8px; border:1px solid #4A4952;
-    background:var(--graphite-light); color:#F2F1ED; font-family:'Inter',sans-serif;
+    width:100%; padding:10px 12px; border-radius:8px; border:1px solid #5C4530;
+    background:var(--graphite-light); color:#F5EBDD; font-family:'Inter',sans-serif;
     font-size:13px;
   }
   .lock-text-input:focus{ outline:none; border-color:var(--felt-light); }
-  .lock-text-input::placeholder{ color:#8A8992; }
+  .lock-text-input::placeholder{ color:#A6906F; }
 
   /* ---------- MODAL ---------- */
   .modal-overlay{
@@ -732,6 +732,17 @@
     <button type="button" id="lockUnlockBtn" class="key key-add" style="width:100%;">Desbloquear</button>
   </div>
 </div>
+<div class="modal-overlay" id="globalSearchOverlay" hidden>
+  <div class="modal-box scan-box">
+    <div class="modal-title">🔍 Buscar en todo el sistema</div>
+    <input type="text" id="globalSearchInput" class="paper-search" style="margin-bottom:0;" placeholder="Producto, cliente fiado, venta...">
+    <div id="globalSearchResults" class="dash-list" style="max-height:340px; overflow-y:auto;"></div>
+    <div class="modal-actions">
+      <button type="button" class="key key-clear" id="globalSearchClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="lock-overlay" id="authOverlay" hidden>
   <div class="lock-box" style="max-width:320px;">
     <div class="lock-icon">☁️</div>
@@ -765,6 +776,7 @@
   <div class="pos-header">
     <p class="pos-title">Registro de Ventas</p>
     <div class="header-actions">
+      <button type="button" id="globalSearchBtn" class="history-btn" title="Buscar en todo el sistema">🔍 Buscar</button>
       <button type="button" id="brandToggle" class="history-btn">🏪 Mi bodega</button>
       <button type="button" id="lockNowBtn" class="history-btn" hidden>🔒</button>
     </div>
@@ -1446,6 +1458,11 @@
   const lockError = document.getElementById('lockError');
   const lockUnlockBtn = document.getElementById('lockUnlockBtn');
   const lockNowBtn = document.getElementById('lockNowBtn');
+  const globalSearchBtn = document.getElementById('globalSearchBtn');
+  const globalSearchOverlay = document.getElementById('globalSearchOverlay');
+  const globalSearchInput = document.getElementById('globalSearchInput');
+  const globalSearchResults = document.getElementById('globalSearchResults');
+  const globalSearchClose = document.getElementById('globalSearchClose');
   const authOverlay = document.getElementById('authOverlay');
   const authEmail = document.getElementById('authEmail');
   const authPassword = document.getElementById('authPassword');
@@ -2573,7 +2590,7 @@
   ];
   const CATEGORY_STYLES = {
     'Abarrotes': { icon: '🛒', color: '#8B5E34' },
-    'Bebidas': { icon: '🥤', color: '#1C7A57' },
+    'Bebidas': { icon: '🥤', color: '#DE7C3E' },
     'Snacks': { icon: '🍿', color: '#C97B2E' },
     'Lácteos': { icon: '🥛', color: '#4A90A4' },
     'Panadería': { icon: '🍞', color: '#B4763A' },
@@ -2584,7 +2601,7 @@
     'Útiles escolares': { icon: '✏️', color: '#D4A22A' },
     'Otros': { icon: '🏷️', color: '#7A7986' }
   };
-  const CATEGORY_FALLBACK_COLORS = ['#8B5E34','#1C7A57','#C97B2E','#4A90A4','#B4763A','#3E8E41','#3C7DBF','#5B7FBF','#B15FA0','#A0522D','#2E8B8B','#8B4A6B'];
+  const CATEGORY_FALLBACK_COLORS = ['#8B5E34','#DE7C3E','#C97B2E','#4A90A4','#B4763A','#3E8E41','#3C7DBF','#5B7FBF','#B15FA0','#A0522D','#2E8B8B','#8B4A6B'];
   function categoryStyle(name){
     if (CATEGORY_STYLES[name]) return CATEGORY_STYLES[name];
     let hash = 0;
@@ -2948,7 +2965,7 @@
   /* ---------- ticket como imagen (para adjuntar el logo en WhatsApp) ---------- */
   function drawDashedCanvasLine(ctx, x1, y, x2){
     ctx.save();
-    ctx.strokeStyle = '#DAD4C2';
+    ctx.strokeStyle = '#E8D4B0';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 3]);
     ctx.beginPath();
@@ -2985,7 +3002,7 @@
       const ctx = canvas.getContext('2d');
       ctx.scale(scale, scale);
 
-      ctx.fillStyle = '#F7F4EC';
+      ctx.fillStyle = '#FBF1E1';
       ctx.fillRect(0, 0, width, height);
 
       let y = pad;
@@ -2998,17 +3015,17 @@
         y += logoH + 4;
       }
       if (branding.name){
-        ctx.fillStyle = '#2A2A28';
+        ctx.fillStyle = '#3A2A18';
         ctx.font = '700 17px Inter, sans-serif';
         ctx.fillText(branding.name, width / 2, y + 14);
         y += 26;
       }
       ctx.font = '700 15px "Space Mono", monospace';
-      ctx.fillStyle = '#2A2A28';
+      ctx.fillStyle = '#3A2A18';
       ctx.fillText('TICKET DE VENTA', width / 2, y + 14);
       y += 22;
       ctx.font = '400 11px "Space Mono", monospace';
-      ctx.fillStyle = '#9A9384';
+      ctx.fillStyle = '#B09B7E';
       const dateStr = dateObj.toLocaleDateString('es-PE', {day:'2-digit',month:'2-digit',year:'numeric'}) +
         '  ' + dateObj.toLocaleTimeString('es-PE', {hour:'2-digit',minute:'2-digit'});
       ctx.fillText(dateStr, width / 2, y + 10);
@@ -3021,7 +3038,7 @@
         const sub = it.price * it.qty;
         const type = it.type || 'unit';
         ctx.font = '600 14px Inter, sans-serif';
-        ctx.fillStyle = '#2A2A28';
+        ctx.fillStyle = '#3A2A18';
         ctx.fillText(it.name, pad, y);
         ctx.textAlign = 'right';
         ctx.font = '700 14px "Space Mono", monospace';
@@ -3029,7 +3046,7 @@
         ctx.textAlign = 'left';
         y += 18;
         ctx.font = '400 11px "Space Mono", monospace';
-        ctx.fillStyle = '#9A9384';
+        ctx.fillStyle = '#B09B7E';
         let metaText = type === 'bulk'
           ? `${it.qty.toFixed(3)} ${it.unit} x ${fmt(it.price, cur)}`
           : `${it.qty} x ${fmt(it.price, cur)}`;
@@ -3039,12 +3056,12 @@
       });
 
       y += 4;
-      ctx.strokeStyle = '#2A2A28';
+      ctx.strokeStyle = '#3A2A18';
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(width - pad, y); ctx.stroke();
       y += 26;
       ctx.font = '700 13px "Space Mono", monospace';
-      ctx.fillStyle = '#2A2A28';
+      ctx.fillStyle = '#3A2A18';
       ctx.fillText('TOTAL', pad, y);
       ctx.textAlign = 'right';
       ctx.font = '700 21px "Space Mono", monospace';
@@ -3052,7 +3069,7 @@
       ctx.textAlign = 'left';
       y += 24;
       ctx.font = '400 12px Inter, sans-serif';
-      ctx.fillStyle = '#2A2A28';
+      ctx.fillStyle = '#3A2A18';
       ctx.fillText('Pago: ' + paymentLabel(paymentMethod), pad, y);
       if (paymentMethod === 'fiado' && customerName){
         y += 20;
@@ -3633,6 +3650,93 @@
   document.getElementById('prodScanBtn').addEventListener('click', () => openScanOverlay('productos'));
   scanCancel.addEventListener('click', closeScanOverlay);
   scanOverlay.addEventListener('click', e => { if (e.target === scanOverlay) closeScanOverlay(); });
+
+  /* ---------- búsqueda global ---------- */
+  function openGlobalSearch(){
+    globalSearchOverlay.hidden = false;
+    globalSearchInput.value = '';
+    globalSearchResults.innerHTML = '<div class="dash-empty">Escribe algo para buscar.</div>';
+    setTimeout(() => globalSearchInput.focus(), 50);
+  }
+  function closeGlobalSearch(){
+    globalSearchOverlay.hidden = true;
+  }
+  function performGlobalSearch(){
+    const q = globalSearchInput.value.trim().toLowerCase();
+    if (!q){
+      globalSearchResults.innerHTML = '<div class="dash-empty">Escribe algo para buscar.</div>';
+      return;
+    }
+    const results = [];
+
+    catalog.filter(p => p.name.toLowerCase().includes(q)).slice(0, 8).forEach(p => {
+      results.push({
+        icon: typeIcon(p.type || 'unit'),
+        label: p.name,
+        sub: fmt(p.price) + (p.category ? ' · ' + p.category : ''),
+        action: () => {
+          closeGlobalSearch();
+          goToPage('productos');
+          productPageSearch.value = p.name;
+          catalogSearch.value = p.name;
+          renderCatalog();
+        }
+      });
+    });
+
+    fiados.filter(f => f.name.toLowerCase().includes(q)).slice(0, 8).forEach(f => {
+      const bal = fiadoBalance(f);
+      results.push({
+        icon: '📓',
+        label: f.name,
+        sub: bal > 0.001 ? 'Debe ' + fmt(bal) : 'Sin deuda pendiente',
+        action: () => {
+          closeGlobalSearch();
+          goToPage('fiados');
+          fiadosSearch.value = f.name;
+          expandedFiados.add(f.id);
+          renderFiados();
+        }
+      });
+    });
+
+    const matchedSales = [];
+    salesHistory.forEach(rec => {
+      const hit = (rec.items || []).some(it => it.name.toLowerCase().includes(q)) ||
+        (rec.customerName || '').toLowerCase().includes(q);
+      if (hit) matchedSales.push(rec);
+    });
+    matchedSales.slice(0, 8).forEach(rec => {
+      const d = new Date(rec.date);
+      results.push({
+        icon: '🕒',
+        label: fmt(rec.total, rec.currency) + ' — ' + d.toLocaleDateString('es-PE'),
+        sub: (rec.items || []).map(it => it.name).join(', ').slice(0, 60),
+        action: () => {
+          closeGlobalSearch();
+          goToPage('historial');
+        }
+      });
+    });
+
+    if (!results.length){
+      globalSearchResults.innerHTML = `<div class="dash-empty">Sin resultados para "${escapeHtml(globalSearchInput.value.trim())}"</div>`;
+      return;
+    }
+    globalSearchResults.innerHTML = results.map((r, i) => `
+      <div class="dash-list-item global-search-result" data-idx="${i}" style="cursor:pointer;">
+        <span class="dli-name">${r.icon} ${escapeHtml(r.label)}</span>
+        <span class="dli-sub">${escapeHtml(r.sub || '')}</span>
+      </div>
+    `).join('');
+    globalSearchResults.querySelectorAll('.global-search-result').forEach((el, i) => {
+      el.addEventListener('click', () => results[i].action());
+    });
+  }
+  globalSearchBtn.addEventListener('click', openGlobalSearch);
+  globalSearchClose.addEventListener('click', closeGlobalSearch);
+  globalSearchOverlay.addEventListener('click', e => { if (e.target === globalSearchOverlay) closeGlobalSearch(); });
+  globalSearchInput.addEventListener('input', performGlobalSearch);
 
   /* ---------- código interno + etiqueta imprimible ---------- */
   function generateInternalBarcode(){
