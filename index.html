@@ -1679,6 +1679,14 @@
     });
   }
 
+  let cloudImagesUnsub = null;
+  let cloudImagesCache = {};
+  function mergeCloudImages(){
+    catalog.forEach(p => {
+      const img = cloudImagesCache[String(p.id)];
+      if (img) p.image = img;
+    });
+  }
   function attachCloudListener(uid){
     if (cloudListenerUnsub) cloudListenerUnsub();
     cloudListenerUnsub = firebaseDb.collection('stores').doc(uid).onSnapshot(doc => {
@@ -1693,23 +1701,49 @@
       if (Array.isArray(data.fiados)) fiados = data.fiados;
       if (data.branding) branding = data.branding;
       if (data.currency) currencyInput.value = data.currency;
+      mergeCloudImages();
       saveCatalog(); saveHistory(); saveFiados(); saveBranding(); saveCurrency();
       renderCatalog(); renderHistory(); renderFiados(); renderBrand(); render();
       applyingRemoteUpdate = false;
     }, () => {
       setCloudStatus('Se perdió la conexión con la nube. Sigues pudiendo trabajar offline; se reconecta solo.');
     });
+
+    if (cloudImagesUnsub) cloudImagesUnsub();
+    cloudImagesUnsub = firebaseDb.collection('stores').doc(uid).collection('productImages').onSnapshot(snap => {
+      cloudImagesCache = {};
+      snap.forEach(d => { cloudImagesCache[d.id] = d.data().data; });
+      applyingRemoteUpdate = true;
+      mergeCloudImages();
+      saveCatalog();
+      renderCatalog();
+      applyingRemoteUpdate = false;
+    }, () => { /* si falla, seguimos con las fotos que ya tengamos en local */ });
   }
 
   function pushToCloud(){
     if (!firebaseEnabled || !currentUser || !firebaseDb) return;
+    const catalogForCloud = catalog.map(p => {
+      const { image, ...rest } = p;
+      return rest;
+    });
     firebaseDb.collection('stores').doc(currentUser.uid).set({
-      catalog, salesHistory, fiados, branding,
+      catalog: catalogForCloud, salesHistory, fiados, branding,
       currency: currencyInput.value,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true }).catch(() => {
       setCloudStatus('No se pudo sincronizar el último cambio (revisa tu conexión).');
     });
+  }
+  function syncProductImageToCloud(id, imageDataUrl){
+    if (!firebaseEnabled || !currentUser || !firebaseDb) return;
+    firebaseDb.collection('stores').doc(currentUser.uid).collection('productImages').doc(String(id))
+      .set({ data: imageDataUrl }).catch(() => {});
+  }
+  function deleteProductImageFromCloud(id){
+    if (!firebaseEnabled || !currentUser || !firebaseDb) return;
+    firebaseDb.collection('stores').doc(currentUser.uid).collection('productImages').doc(String(id))
+      .delete().catch(() => {});
   }
   function scheduleCloudSync(){
     if (!firebaseEnabled || !currentUser || applyingRemoteUpdate) return;
@@ -2701,11 +2735,15 @@
     if (item.category) entry.category = item.category;
     if (typeof item.stock === 'number') entry.stock = item.stock;
     if (item.image) entry.image = item.image;
+    let savedId;
     if (idx >= 0){
       catalog[idx] = { ...catalog[idx], ...entry };
+      savedId = catalog[idx].id;
     } else {
-      catalog.push({ id: Date.now() + Math.floor(Math.random() * 1000), ...entry });
+      savedId = Date.now() + Math.floor(Math.random() * 1000);
+      catalog.push({ id: savedId, ...entry });
     }
+    if (item.image) syncProductImageToCloud(savedId, item.image);
     saveCatalog();
     renderCatalog();
   }
@@ -3195,7 +3233,9 @@
       if (product) openEditProduct(product);
     } else if (delBtn){
       const id = parseInt(delBtn.dataset.id, 10);
+      const wasImaged = catalog.some(p => p.id === id && p.image);
       catalog = catalog.filter(p => p.id !== id);
+      if (wasImaged) deleteProductImageFromCloud(id);
       saveCatalog();
       renderCatalog();
     } else if (restockBtn){
@@ -3284,7 +3324,13 @@
     } else {
       delete product.stock;
     }
-    if (editProdImageValue) product.image = editProdImageValue; else delete product.image;
+    if (editProdImageValue){
+      product.image = editProdImageValue;
+      syncProductImageToCloud(product.id, editProdImageValue);
+    } else {
+      delete product.image;
+      deleteProductImageFromCloud(product.id);
+    }
     saveCatalog();
     renderCatalog();
     closeEditProduct();
