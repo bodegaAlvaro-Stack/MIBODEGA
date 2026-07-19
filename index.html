@@ -43,7 +43,7 @@
     padding:32px 16px;
   }
   .pos{
-    width:100%; max-width:1120px;
+    width:100%; max-width:1440px;
     background:#FFFDF9;
     border-radius:20px;
     padding:22px 22px 30px;
@@ -183,6 +183,8 @@
 
   /* ---------- REGISTER PANEL ---------- */
   .register{ background:var(--ink); padding:22px 20px 26px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .led-row{ display:flex; gap:10px; }
+  .led-box{ flex:1; min-width:0; }
   .led-display{
     background:#0D0D0F; border-radius:8px; padding:16px 14px;
     box-shadow:inset 0 2px 6px rgba(0,0,0,0.6);
@@ -191,9 +193,16 @@
     text-shadow:0 0 8px rgba(255,68,51,0.55), 0 0 2px rgba(255,68,51,0.8);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
+  .led-display-total{
+    color:#3CFF7A; text-shadow:0 0 8px rgba(60,255,122,0.55), 0 0 2px rgba(60,255,122,0.8);
+  }
   .led-label{
     font-family:'Space Mono',monospace; font-size:10px; letter-spacing:0.2em;
     color:#5A5A62; text-transform:uppercase; margin:-10px 0 0 2px;
+  }
+  @media (max-width:480px){
+    .led-row{ flex-direction:column; }
+    .led-display{ font-size:22px; }
   }
 
   .catalog-section{ display:flex; flex-direction:column; gap:8px; }
@@ -925,6 +934,7 @@
         <label for="prodBarcode">Código de barras (opcional)</label>
         <div class="logo-row">
           <input id="prodBarcode" type="text" placeholder="Escanéalo con 📷 o escríbelo" style="flex:1;">
+          <button type="button" id="prodScanBtn" class="scan-btn" title="Escanear código de barras">📷</button>
         </div>
         <div class="backup-row" style="margin-top:6px;">
           <button type="button" id="prodGenBarcodeBtn" class="key-small">🎲 Generar código</button>
@@ -975,9 +985,15 @@
   <div class="page" id="pageCaja">
   <div class="layout">
     <section class="register">
-      <div>
-        <div class="led-display" id="ledPreview">S/ 0.00</div>
-        <div class="led-label">vista previa</div>
+      <div class="led-row">
+        <div class="led-box">
+          <div class="led-display" id="ledPreview">S/ 0.00</div>
+          <div class="led-label">vista previa</div>
+        </div>
+        <div class="led-box">
+          <div class="led-display led-display-total" id="ledTotal">S/ 0.00</div>
+          <div class="led-label">total del ticket</div>
+        </div>
       </div>
 
       <div class="catalog-section">
@@ -1339,6 +1355,7 @@
   const currencyInput = document.getElementById('currency');
   const cashInput = document.getElementById('cashReceived');
   const ledPreview = document.getElementById('ledPreview');
+  const ledTotal = document.getElementById('ledTotal');
   const itemsList = document.getElementById('itemsList');
   const emptyMsg = document.getElementById('emptyMsg');
   const totalAmount = document.getElementById('totalAmount');
@@ -2123,7 +2140,6 @@
       qtyInput.step = '1'; qtyInput.placeholder = '1';
       if (!qtyInput.value) qtyInput.value = '1';
     }
-    updateLedPreview();
   }
   typeTabs.addEventListener('click', e => {
     const btn = e.target.closest('.type-tab');
@@ -2153,8 +2169,8 @@
 
   /* ---------- core logic ---------- */
   function updateLedPreview(){
-    const p = parseFloat(priceInput.value) || 0;
-    const q = parseFloat(qtyInput.value) || 0;
+    const p = parseFloat(quickPrice.value) || 0;
+    const q = parseFloat(quickQty.value) || 0;
     ledPreview.textContent = fmt(p * q);
   }
   function computeTotal(){
@@ -2204,6 +2220,7 @@
     });
 
     totalAmount.textContent = fmt(computeTotal());
+    ledTotal.textContent = fmt(computeTotal());
     checkoutBtn.disabled = items.length === 0;
     shareWhatsapp.disabled = items.length === 0;
     downloadTicketImg.disabled = items.length === 0;
@@ -2625,6 +2642,12 @@
     if (productPageList) productPageList.innerHTML = html;
   }
 
+  function scrollToTicketIfMobile(){
+    if (window.innerWidth <= 980){
+      const receiptEl = document.querySelector('.receipt');
+      if (receiptEl) receiptEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
   function addFromCatalog(product){
     const type = product.type || 'unit';
     if (type === 'bulk'){
@@ -2644,6 +2667,7 @@
         }
         render();
         saveCurrentTicket();
+        scrollToTicketIfMobile();
       });
       return;
     }
@@ -2658,6 +2682,7 @@
     }
     render();
     saveCurrentTicket();
+    scrollToTicketIfMobile();
   }
 
   function upsertCatalog(item){
@@ -3083,6 +3108,7 @@
       quickQtyLabel.textContent = 'Cant.';
       quickQty.step = '1'; quickQty.placeholder = '1'; quickQty.value = '1';
     }
+    updateLedPreview();
   });
   document.getElementById('quickForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -3110,6 +3136,7 @@
     updateLedPreview();
     render();
     saveCurrentTicket();
+    scrollToTicketIfMobile();
   });
 
   function qtyStep(it){
@@ -3474,15 +3501,40 @@
       })
       .catch(() => null);
   }
+  let scanContext = 'caja';
   function onBarcodeDetected(decodedText){
     closeScanOverlay();
     const code = decodedText.trim();
     const product = catalog.find(p => p.barcode === code);
+
+    if (scanContext === 'productos'){
+      if (product){
+        barcodeInput.value = code;
+        alert('Este código ya está registrado en "' + product.name + '". Ábrelo con el lápiz ✏️ de la lista si quieres editarlo, en vez de crear uno nuevo.');
+        return;
+      }
+      barcodeInput.value = code;
+      nameInput.value = '';
+      nameInput.placeholder = 'Buscando el nombre...';
+      nameInput.focus();
+      lookupBarcodeOnline(code).then(name => {
+        nameInput.placeholder = namePlaceholders[currentType];
+        if (name){
+          nameInput.value = name;
+          alert('Código nuevo: ' + code + '\nEncontré "' + name + '" en una base pública — revísalo, ponle el precio y guárdalo.');
+        } else {
+          alert('Código nuevo: ' + code + '\nNo lo encontré en ninguna base. Completa el nombre y el precio para guardarlo con este código.');
+        }
+      });
+      return;
+    }
+
+    // contexto: Caja (venta)
     if (product){
       addFromCatalog(product);
       return;
     }
-    goToPage('caja');
+    goToPage('productos');
     barcodeInput.value = code;
     nameInput.value = '';
     nameInput.placeholder = 'Buscando el nombre...';
@@ -3491,13 +3543,14 @@
       nameInput.placeholder = namePlaceholders[currentType];
       if (name){
         nameInput.value = name;
-        alert('Código nuevo: ' + code + '\nEncontré "' + name + '" en una base pública — revísalo, ponle el precio y guárdalo.');
+        alert('Código nuevo: ' + code + '\nEncontré "' + name + '" en una base pública — revísalo, ponle el precio y guárdalo en 📦 Productos.');
       } else {
-        alert('Código nuevo: ' + code + '\nNo está en tu catálogo ni lo encontré en la base pública. Completa el nombre y el precio para guardarlo con este código.');
+        alert('Código nuevo: ' + code + '\nNo está en tu catálogo ni lo encontré en la base pública. Completa el nombre y el precio en 📦 Productos para guardarlo con este código.');
       }
     });
   }
-  function openScanOverlay(){
+  function openScanOverlay(context){
+    scanContext = context || 'caja';
     scanOverlay.hidden = false;
     scanStatus.textContent = 'Cargando lector...';
     loadBarcodeLib().then(() => {
@@ -3525,7 +3578,8 @@
       scanStatus.textContent = 'No se pudo cargar el lector. Revisa tu conexión a internet e inténtalo de nuevo.';
     });
   }
-  scanBtn.addEventListener('click', openScanOverlay);
+  scanBtn.addEventListener('click', () => openScanOverlay('caja'));
+  document.getElementById('prodScanBtn').addEventListener('click', () => openScanOverlay('productos'));
   scanCancel.addEventListener('click', closeScanOverlay);
   scanOverlay.addEventListener('click', e => { if (e.target === scanOverlay) closeScanOverlay(); });
 
@@ -3665,8 +3719,8 @@
     logoInput.value = '';
   });
 
-  priceInput.addEventListener('input', updateLedPreview);
-  qtyInput.addEventListener('input', updateLedPreview);
+  quickPrice.addEventListener('input', updateLedPreview);
+  quickQty.addEventListener('input', updateLedPreview);
   currencyInput.addEventListener('input', () => { updateLedPreview(); render(); saveCurrency(); });
   cashInput.addEventListener('input', updateChange);
 
