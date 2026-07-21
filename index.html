@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registro de Ventas</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#C1622C">
+<meta name="theme-color" content="#3F9B6F">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,8 +17,8 @@
     --ink:#241811;
     --graphite:#3D2B1E;
     --graphite-light:#4A3524;
-    --felt:#C1622C;
-    --felt-light:#DE7C3E;
+    --felt:#3F9B6F;
+    --felt-light:#55B583;
     --maroon:#8B3A24;
     --maroon-light:#A34A2E;
     --led:#FF6B35;
@@ -785,11 +785,12 @@
 
   <div class="brand-panel" id="brandPanel" hidden>
     <div class="brand-panel-head"><h3>Datos de la bodega</h3></div>
-    <div class="brand-field">
+    <div class="brand-hint" id="employeeRoleBadge" hidden style="background:#fff; border:1px solid var(--paper-line); border-radius:6px; padding:6px 10px; margin-bottom:4px;"></div>
+    <div class="brand-field" id="brandNameField">
       <label for="bodegaName">Nombre de la bodega</label>
       <input type="text" id="bodegaName" placeholder="Ej. Bodega Don José" maxlength="40">
     </div>
-    <div class="brand-field">
+    <div class="brand-field" id="brandLogoField">
       <label for="logoInput">Logo</label>
       <div class="logo-row">
         <img id="logoPreview" class="logo-preview" hidden alt="Logo">
@@ -798,7 +799,7 @@
       </div>
       <span class="brand-hint">Se guarda achicado en este navegador. Usa una imagen simple (funciona mejor un logo cuadrado).</span>
     </div>
-    <div class="brand-field">
+    <div class="brand-field" id="backupField">
       <label>Respaldo de tus datos</label>
       <div class="backup-row">
         <button type="button" id="backupDownloadBtn" class="key-small">⬇️ Descargar respaldo</button>
@@ -815,6 +816,16 @@
         <button type="button" id="removePinBtn" class="key-small" hidden>Quitar PIN</button>
       </div>
       <span class="brand-hint">Pide este PIN cada vez que se abre la app en este dispositivo. Es una traba simple contra miradas curiosas, no seguridad fuerte — cualquiera con conocimientos técnicos podría saltarla.</span>
+    </div>
+    <div class="brand-field" id="employeesField">
+      <label>👥 Empleados con acceso</label>
+      <div class="backup-row">
+        <input type="text" id="empUidInput" class="paper-search" style="margin-bottom:0; flex:1;" placeholder="Pega el UID del empleado">
+        <button type="button" id="empAddBtn" class="key-small">Agregar como vendedor</button>
+      </div>
+      <input type="text" id="empNoteInput" class="paper-search" style="margin-top:6px;" placeholder="Nombre o referencia (opcional, solo para ti)">
+      <div id="employeesList" style="margin-top:6px;"></div>
+      <span class="brand-hint">Tu empleado ve su propio ID en "🏪 Mi bodega" apenas se cree su cuenta — pídeselo y pégalo aquí. Un vendedor puede vender, ver productos y fiados, pero no ve el Dashboard ni el Historial.</span>
     </div>
     <div class="brand-field" id="plansField" hidden>
       <label>Planes y precios</label>
@@ -1287,6 +1298,7 @@
   const firebaseEnabled = FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.startsWith('TU_');
   let firebaseApp = null, firebaseAuth = null, firebaseDb = null, currentUser = null;
   let applyingRemoteUpdate = false, cloudSyncTimer = null, cloudListenerUnsub = null;
+  let effectiveStoreUid = null, isEmployee = false, employeeRole = null;
 
   /* ---------- Panel de administrador (suscripciones) ----------
      Pega aquí tu propio UID de Firebase (no tu correo) para que el
@@ -1444,6 +1456,16 @@
   const editProdConfirm = document.getElementById('editProdConfirm');
   const downloadTicketImg = document.getElementById('downloadTicketImg');
   const backupDownloadBtn = document.getElementById('backupDownloadBtn');
+  const employeeRoleBadge = document.getElementById('employeeRoleBadge');
+  const brandNameField = document.getElementById('brandNameField');
+  const brandLogoField = document.getElementById('brandLogoField');
+  const backupField = document.getElementById('backupField');
+  const employeesField = document.getElementById('employeesField');
+  const empUidInput = document.getElementById('empUidInput');
+  const empNoteInput = document.getElementById('empNoteInput');
+  const empAddBtn = document.getElementById('empAddBtn');
+  const employeesList = document.getElementById('employeesList');
+  const ownerOnlyFields = [brandNameField, brandLogoField, backupField, employeesField];
   const backupRestoreBtn = document.getElementById('backupRestoreBtn');
   const backupFileInput = document.getElementById('backupFileInput');
   const scanBtn = document.getElementById('scanBtn');
@@ -1676,8 +1698,7 @@
           myUidRow.hidden = false;
           myUidHint.hidden = false;
           myUidDisplay.value = user.uid;
-          attachCloudListener(user.uid);
-          checkSubscription(user);
+          resolveAccountRole(user);
         } else {
           cloudSignOutBtn.hidden = true;
           myUidRow.hidden = true;
@@ -1688,6 +1709,8 @@
           subOverlay.hidden = true;
           adminNavBtn.hidden = true;
           plansField.hidden = true;
+          effectiveStoreUid = null; isEmployee = false; employeeRole = null;
+          applyRolePermissions();
           setTimeout(() => authEmail.focus(), 50);
         }
       });
@@ -1739,12 +1762,12 @@
   }
 
   function pushToCloud(){
-    if (!firebaseEnabled || !currentUser || !firebaseDb) return;
+    if (!firebaseEnabled || !currentUser || !firebaseDb || !effectiveStoreUid) return;
     const catalogForCloud = catalog.map(p => {
       const { image, ...rest } = p;
       return rest;
     });
-    firebaseDb.collection('stores').doc(currentUser.uid).set({
+    firebaseDb.collection('stores').doc(effectiveStoreUid).set({
       catalog: catalogForCloud, salesHistory, fiados, branding,
       currency: currencyInput.value,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1753,17 +1776,17 @@
     });
   }
   function syncProductImageToCloud(id, imageDataUrl){
-    if (!firebaseEnabled || !currentUser || !firebaseDb) return;
-    firebaseDb.collection('stores').doc(currentUser.uid).collection('productImages').doc(String(id))
+    if (!firebaseEnabled || !currentUser || !firebaseDb || !effectiveStoreUid) return;
+    firebaseDb.collection('stores').doc(effectiveStoreUid).collection('productImages').doc(String(id))
       .set({ data: imageDataUrl }).catch(() => {});
   }
   function deleteProductImageFromCloud(id){
-    if (!firebaseEnabled || !currentUser || !firebaseDb) return;
-    firebaseDb.collection('stores').doc(currentUser.uid).collection('productImages').doc(String(id))
+    if (!firebaseEnabled || !currentUser || !firebaseDb || !effectiveStoreUid) return;
+    firebaseDb.collection('stores').doc(effectiveStoreUid).collection('productImages').doc(String(id))
       .delete().catch(() => {});
   }
   function scheduleCloudSync(){
-    if (!firebaseEnabled || !currentUser || applyingRemoteUpdate) return;
+    if (!firebaseEnabled || !currentUser || !effectiveStoreUid || applyingRemoteUpdate) return;
     clearTimeout(cloudSyncTimer);
     cloudSyncTimer = setTimeout(pushToCloud, 800);
   }
@@ -1889,15 +1912,53 @@
   }
 
   /* ---------- suscripción (bloqueo manual de acceso) ---------- */
-  function checkSubscription(user){
-    adminNavBtn.hidden = !isAdminUid(user.uid);
-    if (isAdminUid(user.uid)){
+  function resolveAccountRole(user){
+    firebaseDb.collection('employeeLinks').doc(user.uid).get().then(doc => {
+      if (doc.exists && doc.data().ownerUid){
+        const link = doc.data();
+        effectiveStoreUid = link.ownerUid;
+        employeeRole = link.role || 'vendedor';
+        isEmployee = true;
+      } else {
+        effectiveStoreUid = user.uid;
+        employeeRole = null;
+        isEmployee = false;
+      }
+      applyRolePermissions();
+      attachCloudListener(effectiveStoreUid);
+      checkSubscription(effectiveStoreUid);
+      if (!isEmployee) renderEmployeesList();
+    }).catch(() => {
+      effectiveStoreUid = user.uid;
+      isEmployee = false;
+      employeeRole = null;
+      applyRolePermissions();
+      attachCloudListener(effectiveStoreUid);
+      checkSubscription(effectiveStoreUid);
+    });
+  }
+  function applyRolePermissions(){
+    const restricted = isEmployee && employeeRole === 'vendedor';
+    const dashBtn = document.querySelector('.nav-btn[data-page="dashboard"]');
+    const histBtn = document.querySelector('.nav-btn[data-page="historial"]');
+    if (dashBtn) dashBtn.hidden = restricted;
+    if (histBtn) histBtn.hidden = restricted;
+    if (restricted && (pages.dashboard && !pages.dashboard.hidden || pages.historial && !pages.historial.hidden)){
+      goToPage('caja');
+    }
+    ownerOnlyFields.forEach(el => { if (el) el.hidden = isEmployee; });
+    employeeRoleBadge.hidden = !isEmployee;
+    employeeRoleBadge.textContent = isEmployee ? '🧑‍💼 Acceso de vendedor' : '';
+  }
+  function checkSubscription(storeUid){
+    adminNavBtn.hidden = !isAdminUid(currentUser.uid);
+    if (isAdminUid(currentUser.uid)){
       subOverlay.hidden = true;
       plansField.hidden = true;
       return;
     }
-    plansField.hidden = false;
-    firebaseDb.collection('subscriptions').doc(user.uid).get().then(doc => {
+    plansField.hidden = isEmployee;
+    firebaseDb.collection('subscriptions').doc(storeUid).get().then(doc => {
       if (!doc.exists){
         subOverlay.hidden = true;
         return;
@@ -1926,6 +1987,60 @@
   });
 
   /* ---------- panel de administrador ---------- */
+  /* ---------- empleados (roles: dueño / vendedor) ---------- */
+  function renderEmployeesList(){
+    if (!firebaseEnabled || !currentUser || isEmployee) return;
+    employeesList.innerHTML = '<div class="dash-empty">Cargando...</div>';
+    firebaseDb.collection('employeeLinks').where('ownerUid', '==', currentUser.uid).get().then(snap => {
+      if (snap.empty){
+        employeesList.innerHTML = '<div class="dash-empty">Aún no agregaste empleados.</div>';
+        return;
+      }
+      const rows = [];
+      snap.forEach(d => rows.push({ uid: d.id, ...d.data() }));
+      employeesList.innerHTML = rows.map(r => `
+        <div class="admin-client" data-uid="${escapeHtml(r.uid)}">
+          <div>
+            <div class="history-date">${escapeHtml(r.note || r.uid)}<span class="admin-client-status activo">${escapeHtml((r.role || 'vendedor').toUpperCase())}</span></div>
+            <div class="history-meta">${escapeHtml(r.uid)}</div>
+          </div>
+          <button type="button" class="key-small emp-remove-btn" data-uid="${escapeHtml(r.uid)}">🚫 Quitar acceso</button>
+        </div>
+      `).join('');
+    }).catch(() => {
+      employeesList.innerHTML = '<div class="dash-empty">No se pudo cargar la lista (revisa las reglas de Firestore).</div>';
+    });
+  }
+  empAddBtn.addEventListener('click', () => {
+    const uid = empUidInput.value.trim();
+    if (!uid){
+      alert('Falta pegar el UID del empleado.');
+      return;
+    }
+    if (uid === currentUser.uid){
+      alert('Ese es tu propio UID — no puedes agregarte como tu propio empleado.');
+      return;
+    }
+    firebaseDb.collection('employeeLinks').doc(uid).set({
+      ownerUid: currentUser.uid,
+      role: 'vendedor',
+      note: empNoteInput.value.trim(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      empUidInput.value = '';
+      empNoteInput.value = '';
+      renderEmployeesList();
+    }).catch(() => {
+      alert('No se pudo agregar. Revisa que las reglas de Firestore ya incluyan employeeLinks.');
+    });
+  });
+  employeesList.addEventListener('click', e => {
+    const btn = e.target.closest('.emp-remove-btn');
+    if (!btn) return;
+    if (!confirm('¿Quitarle el acceso a este empleado? Va a dejar de poder entrar al sistema.')) return;
+    firebaseDb.collection('employeeLinks').doc(btn.dataset.uid).delete().then(renderEmployeesList);
+  });
+
   function renderAdminClients(){
     if (!firebaseEnabled || !firebaseDb) return;
     adminClientsList.innerHTML = '<div class="dash-empty">Cargando...</div>';
@@ -2590,7 +2705,7 @@
   ];
   const CATEGORY_STYLES = {
     'Abarrotes': { icon: '🛒', color: '#8B5E34' },
-    'Bebidas': { icon: '🥤', color: '#DE7C3E' },
+    'Bebidas': { icon: '🥤', color: '#55B583' },
     'Snacks': { icon: '🍿', color: '#C97B2E' },
     'Lácteos': { icon: '🥛', color: '#4A90A4' },
     'Panadería': { icon: '🍞', color: '#B4763A' },
@@ -2601,7 +2716,7 @@
     'Útiles escolares': { icon: '✏️', color: '#D4A22A' },
     'Otros': { icon: '🏷️', color: '#7A7986' }
   };
-  const CATEGORY_FALLBACK_COLORS = ['#8B5E34','#DE7C3E','#C97B2E','#4A90A4','#B4763A','#3E8E41','#3C7DBF','#5B7FBF','#B15FA0','#A0522D','#2E8B8B','#8B4A6B'];
+  const CATEGORY_FALLBACK_COLORS = ['#8B5E34','#55B583','#C97B2E','#4A90A4','#B4763A','#3E8E41','#3C7DBF','#5B7FBF','#B15FA0','#A0522D','#2E8B8B','#8B4A6B'];
   function categoryStyle(name){
     if (CATEGORY_STYLES[name]) return CATEGORY_STYLES[name];
     let hash = 0;
